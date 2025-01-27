@@ -15,7 +15,7 @@ class Employee extends HiveObject{
   @HiveField(3)
   final String email;
   @HiveField(4)
-  final Map<String, String> dynamicFields;
+  final Map<String, Map<String, String>> dynamicFields;
 
   Employee(this.name, this.phone, this.email, this.dynamicFields, this.id);
 }
@@ -29,7 +29,7 @@ class Group extends HiveObject{
   @HiveField(2)
   List<Employee>? employees;
   @HiveField(3)
-  final Map<String, String> dynamicFields;
+  final Map<String, Map<String, String>> dynamicFields;
 
   Group(this.name, this.employees, this.dynamicFields, this.id);
 }
@@ -43,7 +43,7 @@ class Branch extends HiveObject{
   @HiveField(2)
   List<Group>? groups;
   @HiveField(3)
-  final Map<String, String> dynamicFields;
+  final Map<String, Map<String, String>> dynamicFields;
 
   Branch(this.name, this.groups, this.dynamicFields, this.id);
 }
@@ -64,7 +64,7 @@ class Organization extends HiveObject{
   @HiveField(5)
   List<Branch>? branches;
   @HiveField(6)
-  final Map<String, String> dynamicFields;
+  final Map<String, Map<String, String>> dynamicFields;
   @HiveField(7)
   final Uint8List? img;
 

@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../widgets/dynamic_fields_widget.dart';
 
 class CreateEditEmployeePage extends StatefulWidget {
   final String title;
   final String? initialName;
   final String? initialPhone;
   final String? initialEmail;
-  final Map<String, String>? initialDynamicFields;
-  final void Function(String name, String phone, String email, Map<String, String> fields) onSubmit;
+  final Map<String,Map<String, String>>? initialDynamicFields;
+  final void Function(String name, String phone, String email, Map<String,Map<String, String>> fields) onSubmit;
 
   const CreateEditEmployeePage({
     required this.title,
@@ -27,7 +28,7 @@ class _CreateEditEmployeePageState extends State<CreateEditEmployeePage> {
   late TextEditingController _nameController;
   late TextEditingController _phoneController;
   late TextEditingController _emailController;
-  late Map<String, TextEditingController> _dynamicFieldControllers;
+  late Map<String,Map<String, String>> dynamicFields;
 
   @override
   void initState() {
@@ -35,26 +36,13 @@ class _CreateEditEmployeePageState extends State<CreateEditEmployeePage> {
     _nameController = TextEditingController(text: widget.initialName);
     _phoneController = TextEditingController(text: widget.initialPhone);
     _emailController = TextEditingController(text: widget.initialEmail);
-
-    // Initialize controllers for dynamic fields
-    _dynamicFieldControllers = {
-      for (var entry in (widget.initialDynamicFields ?? {}).entries)
-        entry.key: TextEditingController(text: entry.value),
-    };
+    dynamicFields = Map<String,Map<String, String>>.from(widget.initialDynamicFields ?? {});
   }
 
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _phoneController.dispose();
-    _emailController.dispose();
-
-    // Dispose dynamic field controllers
-    for (var controller in _dynamicFieldControllers.values) {
-      controller.dispose();
-    }
-
-    super.dispose();
+  void _onFieldsChanged(Map<String,Map<String, String>> updatedFields) {
+    setState(() {
+      dynamicFields = updatedFields;
+    });
   }
 
   @override
@@ -67,152 +55,60 @@ class _CreateEditEmployeePageState extends State<CreateEditEmployeePage> {
         padding: const EdgeInsets.all(16.0),
         child: SingleChildScrollView(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              _buildTextField("Name", _nameController),
+              _buildTextField("Phone", _phoneController),
+              _buildTextField("Email", _emailController),
               const SizedBox(height: 16),
-              TextField(
-                controller: _nameController,
-                decoration: InputDecoration(
-                  labelText: 'Name',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12.0),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
+          
+              // Dynamic Fields Section (Integrated with DynamicFieldsEditor)
+              DynamicFieldsEditor(
+                initialFields: dynamicFields,
+                onFieldsChanged: _onFieldsChanged,
               ),
+          
               const SizedBox(height: 16),
-              TextField(
-                controller: _phoneController,
-                decoration: InputDecoration(
-                  labelText: 'Phone',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12.0),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _emailController,
-                decoration: InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12.0),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
-              ),
-              const SizedBox(height: 16),
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _dynamicFieldControllers.length,
-                itemBuilder: (context, index) {
-                  String key = _dynamicFieldControllers.keys.elementAt(index);
-                  return Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          flex: 2,
-                          child: TextField(
-                            controller: TextEditingController(text: key),
-                            decoration: InputDecoration(
-                              labelText: "Title",
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12.0),
-                              ),
-                            ),
-                            onChanged: (newKey) {
-                              setState(() {
-                                String? value = _dynamicFieldControllers[key]?.text;
-                                _dynamicFieldControllers.remove(key);
-                                _dynamicFieldControllers[newKey] =
-                                    TextEditingController(text: value);
-                              });
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          flex: 3,
-                          child: TextField(
-                            controller: _dynamicFieldControllers[key],
-                            decoration: InputDecoration(
-                              labelText: "Detail",
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12.0),
-                              ),
-                            ),
-                            onChanged: (value) {
-                              _dynamicFieldControllers[key]?.text = value;
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () {
-                            setState(() {
-                              _dynamicFieldControllers.remove(key);
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.add),
-                label: const Text(
-                  "Add Custom Field",
-                  style: TextStyle(color: Colors.white),
-                ),
+              ElevatedButton(
                 onPressed: () {
-                  setState(() {
-                    String newKey = "New Field ${_dynamicFieldControllers.length + 1}";
-                    _dynamicFieldControllers[newKey] = TextEditingController();
-                  });
+                  widget.onSubmit(
+                    _nameController.text,
+                    _phoneController.text,
+                    _emailController.text,
+                    dynamicFields,
+                  );
+                  context.pop();
                 },
+                child: const Text("SAVE", style: TextStyle(fontSize: 18, color: Colors.white)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue[800],
+                  backgroundColor: Colors.blue,
+                  minimumSize: const Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
                 ),
               ),
             ],
           ),
         ),
       ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: ElevatedButton(
-          onPressed: () {
-            final name = _nameController.text;
-            final phone = _phoneController.text;
-            final email = _emailController.text;
+    );
+  }
 
-            // Convert dynamic controllers to map
-            final dynamicFields = {
-              for (var entry in _dynamicFieldControllers.entries) entry.key: entry.value.text,
-            };
-
-            widget.onSubmit(name, phone, email, dynamicFields);
-            context.pop();
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blue,
-            minimumSize: const Size(double.infinity, 50),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8.0),
+  Widget _buildTextField(String label, TextEditingController controller) {
+    return Row(
+      children: [
+        Text(label, style: const TextStyle(fontSize: 16)),
+        const SizedBox(width: 16),
+        Expanded(
+          child: TextField(
+            controller: controller,
+            decoration: InputDecoration(
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             ),
           ),
-          child: const Text(
-            "SAVE",
-            style: TextStyle(fontSize: 18, color: Colors.white),
-          ),
         ),
-      ),
+      ],
     );
   }
 }
