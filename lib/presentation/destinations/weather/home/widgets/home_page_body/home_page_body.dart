@@ -11,12 +11,8 @@ class HomePageBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final homeViewModel = ref.watch(homeViewModelProvider.notifier);
-    final weatherList = ref.watch(
-      homeViewModelProvider.select((value) => value.weatherList),
-    );
 
     return HomePageBodyContent(
-      weatherList: weatherList,
       intentHandler: homeViewModel.onIntent,
     );
   }
