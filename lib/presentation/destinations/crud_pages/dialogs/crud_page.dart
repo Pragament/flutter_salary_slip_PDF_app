@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../widgets/dynamic_fields_widget.dart';
 
 class CreateEditPage extends StatefulWidget {
   final String title;
   final String? initialName;
-  final Map<String, String>? initialDynamicFields;
-  final void Function(String name, Map<String, String> dynamicFields) onSubmit;
+  final Map<String,Map<String, String>>? initialDynamicFields;
+  final void Function(String name, Map<String,Map<String, String>> dynamicFields) onSubmit;
 
   const CreateEditPage({
     Key? key,
@@ -21,30 +22,19 @@ class CreateEditPage extends StatefulWidget {
 
 class _CreateEditPageState extends State<CreateEditPage> {
   late TextEditingController _nameController;
-  late Map<String, TextEditingController> _dynamicFieldControllers;
+  late Map<String,Map<String, String>> dynamicFields;
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.initialName);
-
-    // Initialize controllers for dynamic fields
-    _dynamicFieldControllers = {
-      for (var entry in (widget.initialDynamicFields ?? {}).entries)
-        entry.key: TextEditingController(text: entry.value),
-    };
+    dynamicFields = Map<String,Map<String, String>>.from(widget.initialDynamicFields ?? {});
   }
 
-  @override
-  void dispose() {
-    _nameController.dispose();
-
-    // Dispose dynamic field controllers
-    for (var controller in _dynamicFieldControllers.values) {
-      controller.dispose();
-    }
-
-    super.dispose();
+  void _onFieldsChanged(Map<String,Map<String, String>> updatedFields) {
+    setState(() {
+      dynamicFields = updatedFields;
+    });
   }
 
   @override
@@ -71,111 +61,32 @@ class _CreateEditPageState extends State<CreateEditPage> {
                 ),
               ),
               const SizedBox(height: 24),
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _dynamicFieldControllers.length,
-                itemBuilder: (context, index) {
-                  String key = _dynamicFieldControllers.keys.elementAt(index);
-                  return Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          flex: 2,
-                          child: TextField(
-                            controller: TextEditingController(text: key),
-                            decoration: InputDecoration(
-                              labelText: "Title",
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12.0),
-                              ),
-                            ),
-                            onChanged: (newKey) {
-                              setState(() {
-                                String? value = _dynamicFieldControllers[key]?.text;
-                                _dynamicFieldControllers.remove(key);
-                                _dynamicFieldControllers[newKey] =
-                                    TextEditingController(text: value);
-                              });
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          flex: 3,
-                          child: TextField(
-                            controller: _dynamicFieldControllers[key],
-                            decoration: InputDecoration(
-                              labelText: "Detail",
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12.0),
-                              ),
-                            ),
-                            onChanged: (value) {
-                              _dynamicFieldControllers[key]?.text = value;
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Center(
-                          child: IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () {
-                              setState(() {
-                                _dynamicFieldControllers.remove(key);
-                              });
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+
+              // Use DynamicFieldsEditor for dynamic fields
+              DynamicFieldsEditor(
+                initialFields: dynamicFields,
+                onFieldsChanged: _onFieldsChanged,
               ),
+
               const SizedBox(height: 16),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.add),
-                label: const Text(
-                  "Add Custom Field",
-                  style: TextStyle(color: Colors.white),
-                ),
+              ElevatedButton(
                 onPressed: () {
-                  setState(() {
-                    String newKey = "New Field ${_dynamicFieldControllers.length + 1}";
-                    _dynamicFieldControllers[newKey] = TextEditingController();
-                  });
+                  widget.onSubmit(_nameController.text, dynamicFields);
+                  context.pop();
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue[800],
+                  backgroundColor: Colors.blue,
+                  minimumSize: const Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
+                ),
+                child: const Text(
+                  "SAVE",
+                  style: TextStyle(fontSize: 18, color: Colors.white),
                 ),
               ),
             ],
-          ),
-        ),
-      ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: ElevatedButton(
-          onPressed: () {
-            // Extract dynamic fields into a map
-            final dynamicFields = {
-              for (var entry in _dynamicFieldControllers.entries) entry.key: entry.value.text,
-            };
-
-            widget.onSubmit(_nameController.text, dynamicFields);
-            context.pop();
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blue,
-            minimumSize: const Size(double.infinity, 50),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8.0),
-            ),
-          ),
-          child: const Text(
-            "SAVE",
-            style: TextStyle(fontSize: 18, color: Colors.white),
           ),
         ),
       ),
