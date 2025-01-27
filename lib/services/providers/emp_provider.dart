@@ -36,7 +36,11 @@ class EmployeeNotifier extends StateNotifier<List<Employee>?> {
 
   // Initialize the list of employees for a specific group
   void init()  {
-    state = _employeeRepository.getAll(organization!.id, branch!.id, group!.id);
+    if (organization!=null && branch!=null && group!=null) {
+      state = _employeeRepository.getAll(organization!.id, branch!.id, group!.id);
+    }else{
+      state=[];
+    }
   }
 
   // Add a new employee to a group

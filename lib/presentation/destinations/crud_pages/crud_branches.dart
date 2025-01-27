@@ -33,7 +33,7 @@ class _ManageBranchesScreenState extends ConsumerState<ManageBranchesScreen> {
       appBar: AppBar(
         title: Text("Manage Branches - ${currentOrganization.name}"),
       ),
-      body: ListView.builder(
+      body: branches.isEmpty?Center(child: Text("No Branches")):ListView.builder(
         itemCount: branches.length,
         itemBuilder: (context, index) {
           final branch = branches[index];

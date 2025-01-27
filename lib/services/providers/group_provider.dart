@@ -9,7 +9,7 @@ import '../base/database/hive_manager/Repos/group_repo.dart';
 import '../base/database/hive_manager/models.dart';
 import 'cur_org_provider.dart';
 
-final groupProvider = StateNotifierProvider<GroupNotifier, List<Group>>((ref) {
+final groupProvider = StateNotifierProvider<GroupNotifier, List<Group>?>((ref) {
   final currentOrganization = ref.watch(currentOrganizationProvider);
   final currentBranch = ref.watch(currentBranchProvider);
   return GroupNotifier(ref.read(groupRepositoryProvider),currentOrganization,currentBranch);
@@ -21,7 +21,7 @@ final groupRepositoryProvider = Provider<GroupRepository>((ref) {
 });
 
 // StateNotifier to manage groups
-class GroupNotifier extends StateNotifier<List<Group>> {
+class GroupNotifier extends StateNotifier<List<Group>?> {
   final GroupRepository _groupRepository;
   final Organization? organization;
   final Branch? branch;
@@ -32,7 +32,11 @@ class GroupNotifier extends StateNotifier<List<Group>> {
 
   // Initialize the list of groups for a specific branch
   void init()  {
-    state = _groupRepository.getAll(organization!.id, branch!.id);
+    if(organization != null && branch != null) {
+      state = _groupRepository.getAll(organization!.id, branch!.id);
+    }else{
+      state=[];
+    }
   }
 
   // Add a new group to a branch
