@@ -21,6 +21,7 @@ class BasePage<SCREEN extends Screen, SCREEN_STATE extends ScreenState,
       viewModelProvider;
   final SCREEN? screen;
   final AppBar? appBar;
+  final Drawer? drawer;
   final Function(VIEW_MODEL viewModel)? onAppBarBackPressed;
   final List<Widget> Function()? appBarActions;
   final Widget? loading;
@@ -30,6 +31,7 @@ class BasePage<SCREEN extends Screen, SCREEN_STATE extends ScreenState,
   const BasePage({
     super.key,
     this.appBar,
+    this.drawer,
     required this.viewModelProvider,
     this.screen,
     required this.body,
@@ -81,6 +83,7 @@ class _BasePageContent<VIEW_MODEL extends BaseViewModel<Screen, SCREEN_STATE>,
   final bool hideDefaultLoading;
   final Function(VIEW_MODEL controller)? onAppBarBackPressed;
   final List<Widget>? appBarActions;
+  final Drawer? drawer;
   final Widget body;
   final Widget? loading;
 
@@ -91,6 +94,7 @@ class _BasePageContent<VIEW_MODEL extends BaseViewModel<Screen, SCREEN_STATE>,
     required this.body,
     required this.loading,
     required this.hideDefaultLoading,
+    this.drawer
   });
 
   @override
@@ -105,6 +109,7 @@ class _BasePageContent<VIEW_MODEL extends BaseViewModel<Screen, SCREEN_STATE>,
       child: SafeArea(
         child: Scaffold(
           backgroundColor: context.theme.scaffoldBackgroundColor,
+          drawer: drawer,
           appBar: AppBar(
             leading: hasBackButton
                 ? AppBarBackButton<VIEW_MODEL, SCREEN_STATE>(

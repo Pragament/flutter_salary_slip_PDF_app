@@ -8,6 +8,7 @@ import 'package:flutter_template/presentation/destinations/weather/home/home_scr
 import 'package:flutter_template/presentation/destinations/weather/home/home_screen_intent.dart';
 import 'package:flutter_template/presentation/destinations/weather/home/home_screen_state.dart';
 import 'package:flutter_template/presentation/destinations/weather/home/home_view_model.dart';
+import 'package:flutter_template/presentation/destinations/weather/home/widgets/home_page_body/home_page_drawer.dart';
 
 import 'widgets/home_page_body/home_page_body.dart';
 
@@ -20,33 +21,42 @@ class HomePage extends ConsumerWidget {
     this.homeScreen = const HomeScreen(),
   });
 
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return BasePage<HomeScreen, HomeScreenState, HomeViewModel>(
-      viewModelProvider: homeViewModelProvider,
-      screen: homeScreen,
-      appBarActions: () => [
-        IconButton(
-          onPressed: () {
-            String locale = context.locale.toString();
-            if (locale == "hi_IN") {
-              context.setLocale(const Locale("en", "US"));
-            } else {
-              context.setLocale(const Locale("hi", "IN"));
-            }
-          },
-          icon: const Icon(Icons.language),
-        ),
-        IconButton(
-          onPressed: () {
-            final viewModel = ref.watch(homeViewModelProvider.notifier);
-            viewModel.onIntent(const SearchHomeScreenIntent());
-          },
-          icon: const Icon(Icons.search),
-        ),
-        const ThemePicker(),
-      ],
-      body: const HomePageBody(),
+    // return BasePage<HomeScreen, HomeScreenState, HomeViewModel>(
+    //   viewModelProvider: homeViewModelProvider,
+    //   screen: homeScreen,
+    //   drawer: myDrawer(context,ref),
+    //   appBarActions: () => [
+    //     IconButton(
+    //       onPressed: () {
+    //         String locale = context.locale.toString();
+    //         if (locale == "hi_IN") {
+    //           context.setLocale(const Locale("en", "US"));
+    //         } else {
+    //           context.setLocale(const Locale("hi", "IN"));
+    //         }
+    //       },
+    //       icon: const Icon(Icons.language),
+    //     ),
+    //     IconButton(
+    //       onPressed: () {
+    //         final viewModel = ref.watch(homeViewModelProvider.notifier);
+    //         viewModel.onIntent(const SearchHomeScreenIntent());
+    //       },
+    //       icon: const Icon(Icons.search),
+    //     ),
+    //     const ThemePicker(),
+    //   ],
+    //   body: const HomePageBody(),
+    // );
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("HomePage"),
+      ),
+      drawer: myDrawer(context, ref),
+      body: Container(),
     );
   }
 }
