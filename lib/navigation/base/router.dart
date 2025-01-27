@@ -79,6 +79,7 @@ final router = GoRouter(
       builder: (context, state) {
         Map<String,dynamic> args=state.extra as Map<String,dynamic>;
         return ManageBusinessPage(title: args["title"],
+            initialImg: args["initialImg"],
             initialPhone: args["initialPhone"],
             initialEmail: args["initialEmail"],initialDynamicFields: args["initialDynamicFields"],
             initialAddress: args["initialAddress"],

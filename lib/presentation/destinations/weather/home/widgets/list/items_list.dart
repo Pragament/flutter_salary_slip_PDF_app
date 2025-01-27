@@ -43,6 +43,12 @@ class _ItemsListState extends ConsumerState<ItemsList> {
 
   @override
   Widget build(BuildContext context) {
+    if(widget.items.isEmpty){
+      return Scaffold(
+        appBar: AppBar(title: Text(widget.title)),
+        body: Center(child: Text("Nothing in here")),
+      );
+    }
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),

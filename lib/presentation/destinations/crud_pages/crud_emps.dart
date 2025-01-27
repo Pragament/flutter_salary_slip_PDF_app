@@ -35,17 +35,17 @@ class _ManageBranchesScreenState extends ConsumerState<ManageEmployeesScreen> {
       appBar: AppBar(
         title: Text("Manage Employees - ${currentGroup.name}"),
       ),
-      body: ListView.builder(
-        itemCount: employees?.length,
+      body: (employees==null || employees.isEmpty)?Center(child: Text("No Employees.")):ListView.builder(
+        itemCount: employees.length,
         itemBuilder: (context, index) {
-          final employee = employees?[index];
+          final employee = employees[index];
           return Padding(
             padding: const EdgeInsets.all(8.0),
             child: Card(
               elevation: 3,
               color: Colors.grey.shade100,
               child: ListTile(
-                title: Text(employee!.name),
+                title: Text(employee.name),
                 subtitle: Text(employee.email),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,

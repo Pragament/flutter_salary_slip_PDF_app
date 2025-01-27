@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../services/providers/org_provider.dart';
 import '../../../services/base/database/hive_manager/models.dart';
 import '../../../services/base/id_generator.dart';
-import 'dialogs/crud_page.dart';
 
 class ManageOrganizationsScreen extends ConsumerStatefulWidget {
   const ManageOrganizationsScreen({Key? key}) : super(key: key);
@@ -28,7 +27,7 @@ class _OrganizationScreenState extends ConsumerState<ManageOrganizationsScreen> 
       appBar: AppBar(
         title: Text("Manage Organizations"),
       ),
-      body: ListView.builder(
+      body: organizations.isEmpty?Center(child: Text("No Organizations")):ListView.builder(
         itemCount: organizations.length,
         itemBuilder: (context, index) {
           final organization = organizations[index];
@@ -49,6 +48,7 @@ class _OrganizationScreenState extends ConsumerState<ManageOrganizationsScreen> 
                           "initialPhone": organization.phone,
                           "initialEmail": organization.mail,
                           "initialAddress": organization.address,
+                          "initialImg":organization.img,
                                   'initialName': organization.name,
                                   'initialDynamicFields': organization.dynamicFields,
                               "onSave": (name,add,em,ph, fields,img) {

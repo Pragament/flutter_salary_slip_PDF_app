@@ -30,9 +30,6 @@ final currentGroupProvider = StateNotifierProvider< CurrentGroupNotifier,Group?>
   } else {
     group = null; // Handle null case if no branches are found
   }
-
-
-  //final initialGroup= box.get("currentGroup")??branch?.groups?.isNotEmpty == true ? branch?.groups?.first : null;
   return CurrentGroupNotifier(box, group);
 });
 
@@ -52,11 +49,18 @@ class CurrentGroupNotifier extends StateNotifier<Group?> {
     final sharedPrefs=GetIt.instance<SharedPreferences>();
     String currentGroupId= sharedPrefs.getString("defaultGroup")??"";
     if(deleted!=null){
-      if(currentGroupId==deleted.id){
-        String? newId=curBranch?.groups?.first.id;
-        sharedPrefs.setString("defaultGroup", newId.toString());
-        Box box=Hive.box<Organization>("organizations");
-        state=box.get("defaultGroupId");}
+      if (currentGroupId == deleted.id) {
+        // Check if groups are available in the current branch
+        String? newId = curBranch?.groups?.isNotEmpty == true ? curBranch?.groups?.first.id : null;
+
+        // Safely set the new default group or a fallback value
+        sharedPrefs.setString("defaultGroup", newId ?? "null");
+
+        // Retrieve the default group ID from Hive with a fallback value
+        Box box = Hive.box<Organization>("organizations");
+        state = box.get("defaultGroupId");
+      }
+
     }else{
       if(currentGroupId==group?.id){
         state = group;

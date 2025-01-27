@@ -34,7 +34,7 @@ class _ManageBranchesScreenState extends ConsumerState<ManageGroupsScreen> {
       appBar: AppBar(
         title: Text("Manage Groups - ${currentBranch.name}"),
       ),
-      body: ListView.builder(
+      body: (groups==null || groups.isEmpty )?Center(child: Text("No Groups")):ListView.builder(
         itemCount: groups.length,
         itemBuilder: (context, index) {
           final group = groups[index];

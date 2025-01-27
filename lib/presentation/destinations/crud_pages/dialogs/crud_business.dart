@@ -54,6 +54,7 @@ class _ManageBusinessPageState extends State<ManageBusinessPage> {
     };
 
     img = widget.initialImg;
+    print("init : "+img.toString());
   }
 
   @override
@@ -102,19 +103,26 @@ class _ManageBusinessPageState extends State<ManageBusinessPage> {
                     elevation: 4.0, // Set the elevation for the shadow
                     shadowColor: Colors.black87, // Set the shadow color
                     shape: const CircleBorder(), // Ensure the shape is circular
-                    child: CircleAvatar(
-                      radius: 40,
-                      backgroundColor: Colors.white,
-                      child: img == null
-                          ? IconButton(
-                        icon: const Icon(Icons.add_photo_alternate, size: 30),
-                        onPressed: ()async{
-                          img=await pickImage();
-                        },
-                      )
-                          : Image.memory(img!),
+                    child: InkWell(
+                      onTap: () async {
+                        img = await pickImage();
+                        print(img.toString());
+                        setState(() {});
+                      },
+                      borderRadius: BorderRadius.circular(40), // Ensure the tap area is circular
+                      child: CircleAvatar(
+                        radius: 40,
+                        backgroundColor: Colors.white,
+                        backgroundImage: img != null
+                            ? MemoryImage(img!) // Set the image as the background
+                            : null,
+                        child: img == null
+                            ? const Icon(Icons.add_photo_alternate, size: 30)
+                            : null, // Hide the icon when an image is set
+                      ),
                     ),
                   ),
+
                   const SizedBox(height: 8),
                   const Text(
                     "Add Business Logo",

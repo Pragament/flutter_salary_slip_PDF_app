@@ -29,7 +29,11 @@ class BranchNotifier extends StateNotifier<List<Branch>> {
 
   // Initialize the list of branches for a specific organization
   void init()  {
-    state = _branchRepository.getAll(organization!.id);
+    if(organization!=null) {
+      state = _branchRepository.getAll(organization!.id);
+    }else{
+      state=[];
+    }
   }
 
   // Add a new branch to an organization

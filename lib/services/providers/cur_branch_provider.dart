@@ -27,10 +27,6 @@ final currentBranchProvider = StateNotifierProvider< CurrentBranchNotifier,Branc
     branch = null; // Handle null case explicitly
   }
 
-  //print(branch?.first);
-
-  //final branch=box.get("currentBranch")??organization?.branches?.isNotEmpty == true ? organization?.branches?.first : null;
-  //print("Provider : ${branch?.name}");
   return CurrentBranchNotifier(box,branch);
 });
 
@@ -41,26 +37,41 @@ class CurrentBranchNotifier extends StateNotifier<Branch?> {
 
   void setBranch(Branch branch) {
     state = branch;
-    final sharedPrefs=GetIt.instance<SharedPreferences>();
+    final sharedPrefs = GetIt.instance<SharedPreferences>();
     sharedPrefs.setString("defaultBranch", branch.id);
-    sharedPrefs.setString("defaultGroup", branch.groups!.first.id);
+    if (branch.groups != null && branch.groups!.isNotEmpty) {
+      sharedPrefs.setString("defaultGroup", branch.groups!.first.id);
+    } else {
+      sharedPrefs.setString(
+          "defaultGroup", "defaultGroupId"); // Use a fallback value
+    }
+
 
     //box.put('currentBranch', branch);
   }
 
-  void resetBranch(Branch? branch,Branch? deleted,Organization? curOrg) {
-    final sharedPrefs=GetIt.instance<SharedPreferences>();
-    String? currentBranchId= sharedPrefs.getString("defaultBranch");
-    if(deleted!=null){
-      if(currentBranchId==deleted.id){
-        String? newId=curOrg?.branches?.first.id;
-        sharedPrefs.setString("defaultBranch", newId.toString());
-        sharedPrefs.setString("defaultGroup", curOrg?.branches?.first.groups?.first.id??"null");
-        Box box=Hive.box<Organization>("organizations");
-        state=box.get("defaultBranchId");}
-    }else{
-      if(currentBranchId==branch?.id){
-        state = branch;
+  void resetBranch(Branch? branch, Branch? deleted, Organization? curOrg) {
+    final sharedPrefs = GetIt.instance<SharedPreferences>();
+    String? currentBranchId = sharedPrefs.getString("defaultBranch");
+    if (deleted != null) {
+      if (currentBranchId == deleted.id) {
+        String? newId = curOrg?.branches?.isNotEmpty == true ? curOrg?.branches
+            ?.first.id : null;
+        sharedPrefs.setString("defaultBranch", newId ?? "null");
+
+        String? defaultGroupId = curOrg?.branches?.isNotEmpty == true &&
+            curOrg?.branches?.first.groups?.isNotEmpty == true
+            ? curOrg?.branches?.first.groups?.first.id
+            : null;
+        sharedPrefs.setString("defaultGroup", defaultGroupId??"null");
+
+        Box box = Hive.box<Organization>("organizations");
+        state = box.get("defaultBranchId");// Ensure 'state' has a fallback value
+
+      } else {
+        if (currentBranchId == branch?.id) {
+          state = branch;
+        }
       }
     }
   }
