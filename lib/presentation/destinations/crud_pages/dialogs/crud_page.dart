@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/dynamic_fields_widget.dart';
@@ -53,7 +54,7 @@ class _CreateEditPageState extends State<CreateEditPage> {
               TextField(
                 controller: _nameController,
                 decoration: InputDecoration(
-                  labelText: "Name",
+                  labelText: "name".tr(),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12.0),
                   ),
@@ -81,8 +82,8 @@ class _CreateEditPageState extends State<CreateEditPage> {
                     borderRadius: BorderRadius.circular(8.0),
                   ),
                 ),
-                child: const Text(
-                  "SAVE",
+                child:  Text(
+                  "save".tr(),
                   style: TextStyle(fontSize: 18, color: Colors.white),
                 ),
               ),

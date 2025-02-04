@@ -9,7 +9,7 @@ import 'package:flutter_template/presentation/destinations/weather/home/home_scr
 import 'package:flutter_template/presentation/destinations/weather/home/home_screen_state.dart';
 import 'package:flutter_template/presentation/destinations/weather/home/home_view_model.dart';
 import 'package:flutter_template/presentation/destinations/weather/home/widgets/home_page_body/home_page_drawer.dart';
-
+import 'package:flutter_template/generated/codegen_loader.g.dart';
 import 'widgets/home_page_body/home_page_body.dart';
 
 @RoutePage()
@@ -53,7 +53,31 @@ class HomePage extends ConsumerWidget {
     // );
     return Scaffold(
       appBar: AppBar(
-        title: Text("HomePage"),
+        title: Text("homePageTitle".tr()
+        ),
+        actions: [
+        IconButton(
+        onPressed: () {
+      String locale = context.locale.toString();
+      if (locale == "hi_IN") {
+        context.setLocale(const Locale("te", "IN"));
+      } else if (locale=="en_US"){
+        context.setLocale(const Locale("hi", "IN"));
+      }else{
+        context.setLocale(const Locale("en", "US"));
+      }
+    },
+    icon: const Icon(Icons.language),
+    ),
+    IconButton(
+    onPressed: () {
+    // final viewModel = ref.watch(homeViewModelProvider.notifier);
+    // viewModel.onIntent(const SearchHomeScreenIntent());
+    },
+    icon: const Icon(Icons.search),
+    ),
+    const ThemePicker(),
+    ],
       ),
       drawer: myDrawer(context, ref),
       body: Container(),

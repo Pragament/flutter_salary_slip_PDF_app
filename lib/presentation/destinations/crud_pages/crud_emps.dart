@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -24,18 +25,20 @@ class _ManageBranchesScreenState extends ConsumerState<ManageEmployeesScreen> {
     final currentOrg = ref.watch(currentOrganizationProvider);
     if (currentGroup == null) {
       return Scaffold(
-        appBar: AppBar(title: Text("Manage Employees")),
-        body: Center(child: Text("No group selected.")),
+        appBar: AppBar(title: Text("manageEmp".tr())),
+        body: Center(child: Text("noGrpSelected".tr())),
       );
     }
 
     final employees = ref.watch(employeeProvider);
+    print(employees?.isEmpty);
+
 
     return Scaffold(
       appBar: AppBar(
-        title: Text("Manage Employees - ${currentGroup.name}"),
+        title: Text("${"manageEmp".tr()} - ${currentGroup.name}"),
       ),
-      body: (employees==null || employees.isEmpty)?Center(child: Text("No Employees.")):ListView.builder(
+      body: (employees==null || employees.isEmpty)?Center(child: Text("noEmp".tr())):ListView.builder(
         itemCount: employees.length,
         itemBuilder: (context, index) {
           final employee = employees[index];
@@ -54,7 +57,7 @@ class _ManageBranchesScreenState extends ConsumerState<ManageEmployeesScreen> {
                       icon: Icon(Icons.edit),
                       onPressed: () =>context.push("/create-edit-emp",
                           extra: {
-                        "title":"Edit Employee",
+                        "title":"editEmp".tr(),
                                 'initialName': employee.name,
                                 'initialPhone': employee.phone,
                                 'initialEmail': employee.email,
@@ -101,7 +104,7 @@ class _ManageBranchesScreenState extends ConsumerState<ManageEmployeesScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () =>context.push("/create-edit-emp",extra: {
-          "title":"Create Employee",
+          "title":"createEmp".tr(),
           'initialName': null,
           'initialPhone': null,
           'initialEmail': null,

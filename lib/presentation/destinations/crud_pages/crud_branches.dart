@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_template/services/providers/cur_branch_provider.dart';
@@ -22,8 +23,8 @@ class _ManageBranchesScreenState extends ConsumerState<ManageBranchesScreen> {
     final currentOrganization = ref.watch(currentOrganizationProvider);
     if (currentOrganization == null) {
       return Scaffold(
-        appBar: AppBar(title: Text("Manage Branches")),
-        body: Center(child: Text("No organization selected.")),
+        appBar: AppBar(title: Text("manageBr".tr())),
+        body: Center(child: Text("noOrgSelected".tr())),
       );
     }
 
@@ -31,9 +32,9 @@ class _ManageBranchesScreenState extends ConsumerState<ManageBranchesScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text("Manage Branches - ${currentOrganization.name}"),
+        title: Text("${"manageBr".tr()} - ${currentOrganization.name}"),
       ),
-      body: branches.isEmpty?Center(child: Text("No Branches")):ListView.builder(
+      body: branches.isEmpty?Center(child: Text("noBranch".tr())):ListView.builder(
         itemCount: branches.length,
         itemBuilder: (context, index) {
           final branch = branches[index];
@@ -50,7 +51,7 @@ class _ManageBranchesScreenState extends ConsumerState<ManageBranchesScreen> {
                     IconButton(
                       icon: Icon(Icons.edit),
                       onPressed: () => context.push("/create-edit-page", extra: {
-                        "title": "Edit Branch",
+                        "title": "editBr".tr(),
                         "initialName": branch.name,
                         "initialDynamicFields": branch.dynamicFields,
                         "onSave": (name, fields) {
@@ -97,7 +98,7 @@ class _ManageBranchesScreenState extends ConsumerState<ManageBranchesScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () =>context.push("/create-edit-page",extra: {
-          "title":"Create Branch",  "initialName": null,
+          "title":"createBr".tr(),  "initialName": null,
           "initialDynamicFields": null,"onSave":(name, fields) {
         final newBranch = Branch(name, null, fields, generateId());
         ref.read(branchProvider.notifier).addBranch(currentOrganization.id, newBranch);

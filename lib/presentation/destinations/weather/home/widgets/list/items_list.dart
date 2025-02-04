@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_template/services/base/database/hive_manager/models.dart';
@@ -46,7 +47,7 @@ class _ItemsListState extends ConsumerState<ItemsList> {
     if(widget.items.isEmpty){
       return Scaffold(
         appBar: AppBar(title: Text(widget.title)),
-        body: Center(child: Text("Nothing in here")),
+        body: Center(child: Text("nothing".tr())),
       );
     }
     return Scaffold(
@@ -61,7 +62,7 @@ class _ItemsListState extends ConsumerState<ItemsList> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search...',
+                hintText: 'search'.tr(),
                 prefixIcon: Icon(Icons.search),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
@@ -69,11 +70,11 @@ class _ItemsListState extends ConsumerState<ItemsList> {
               ),
             ),
           ),
-          if(widget.title=="Switch Group")ElevatedButton(onPressed: (){
-            ref.read(currentGroupProvider.notifier).setGroup(Group("All Groups", null,
+          if(widget.title=="switchGrp".tr())ElevatedButton(onPressed: (){
+            ref.read(currentGroupProvider.notifier).setGroup(Group("allGrp".tr(), null,
                 {}, "allGroups"));
             context.pop();
-          }, child: Text("Select All",style: TextStyle(color: Colors.white),),
+          }, child: Text("selectAll".tr(),style: TextStyle(color: Colors.white),),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.grey.shade700,
               minimumSize: const Size(200, 50),

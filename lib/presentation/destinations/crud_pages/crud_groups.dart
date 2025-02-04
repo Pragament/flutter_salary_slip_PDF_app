@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_template/services/providers/cur_group_provider.dart';
@@ -23,8 +24,8 @@ class _ManageBranchesScreenState extends ConsumerState<ManageGroupsScreen> {
     final currentOrg= ref.watch(currentOrganizationProvider);
     if (currentBranch == null) {
       return Scaffold(
-        appBar: AppBar(title: Text("Manage Groups")),
-        body: Center(child: Text("No branch selected.")),
+        appBar: AppBar(title: Text("manageGrp".tr())),
+        body: Center(child: Text("noBrSelected".tr())),
       );
     }
 
@@ -32,9 +33,9 @@ class _ManageBranchesScreenState extends ConsumerState<ManageGroupsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text("Manage Groups - ${currentBranch.name}"),
+        title: Text("${"manageGrp".tr()} - ${currentBranch.name}"),
       ),
-      body: (groups==null || groups.isEmpty )?Center(child: Text("No Groups")):ListView.builder(
+      body: (groups==null || groups.isEmpty )?Center(child: Text("noGrp".tr())):ListView.builder(
         itemCount: groups.length,
         itemBuilder: (context, index) {
           final group = groups[index];
@@ -51,7 +52,7 @@ class _ManageBranchesScreenState extends ConsumerState<ManageGroupsScreen> {
                     IconButton(
                       icon: Icon(Icons.edit),
                       onPressed: () => context.push("/create-edit-page",extra: {
-                        "title":"Edit Group",
+                        "title":"editGrp".tr(),
                           "onSave": (name, fields) {
                             final updatedGroup = Group(name, group.employees, fields, group.id);
                             ref
@@ -96,7 +97,7 @@ class _ManageBranchesScreenState extends ConsumerState<ManageGroupsScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push("/create-edit-page",extra: {
-          "title":"Create Group",
+          "title":"createGrp".tr(),
           "initialName": null,
           "initialDynamicFields": null,
           "onSave": (name, fields) {
