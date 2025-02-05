@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 class DynamicFieldsEditor extends StatefulWidget {
@@ -72,7 +73,7 @@ class _DynamicFieldsEditorState extends State<DynamicFieldsEditor> {
                       child: TextFormField(
                         initialValue: title,  // Initialize with the title of the field
                         decoration: InputDecoration(
-                          labelText: "Field Title",
+                          labelText: "fieldTitle".tr(),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12.0),
                           ),
@@ -90,7 +91,7 @@ class _DynamicFieldsEditorState extends State<DynamicFieldsEditor> {
                       child: TextFormField(
                         initialValue: content,  // Initialize with the content of the field
                         decoration: InputDecoration(
-                          labelText: "Field Content",
+                          labelText: "fieldContent".tr(),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12.0),
                           ),
@@ -115,8 +116,8 @@ class _DynamicFieldsEditorState extends State<DynamicFieldsEditor> {
           const SizedBox(height: 16),
           // Add Custom Field Button
           TextButton.icon(
-            icon: const Icon(Icons.add),
-            label: const Text("Add Custom Field", style: TextStyle(color: Colors.white)),
+            icon: const Icon(Icons.add,color: Colors.white,),
+            label:  Text("addField".tr(), style: TextStyle(color: Colors.white)),
             onPressed: _addField,  // Call _addField to add a new field
             style: TextButton.styleFrom(
               backgroundColor: Colors.blue[800],

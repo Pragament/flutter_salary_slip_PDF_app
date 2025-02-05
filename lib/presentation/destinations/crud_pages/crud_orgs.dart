@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_template/services/providers/cur_org_provider.dart';
@@ -25,9 +26,9 @@ class _OrganizationScreenState extends ConsumerState<ManageOrganizationsScreen> 
     final organizations = ref.watch(organizationProvider);
     return Scaffold(
       appBar: AppBar(
-        title: Text("Manage Organizations"),
+        title: Text("manageOrgs".tr()),
       ),
-      body: organizations.isEmpty?Center(child: Text("No Organizations")):ListView.builder(
+      body: organizations.isEmpty?Center(child: Text("noOrg".tr())):ListView.builder(
         itemCount: organizations.length,
         itemBuilder: (context, index) {
           final organization = organizations[index];
@@ -44,7 +45,7 @@ class _OrganizationScreenState extends ConsumerState<ManageOrganizationsScreen> 
                     IconButton(
                       icon: Icon(Icons.edit),
                         onPressed: () => context.push("/create-edit-org", extra: {
-                          "title":  "Edit Organization",
+                          "title":  "editOrg".tr(),
                           "initialPhone": organization.phone,
                           "initialEmail": organization.mail,
                           "initialAddress": organization.address,
@@ -95,7 +96,7 @@ class _OrganizationScreenState extends ConsumerState<ManageOrganizationsScreen> 
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push("/create-edit-org",extra: {
-    "title":  "Create Organization",
+    "title":  "createOrg".tr(),
           "initialName": null,
           "initialEmail":null,
           "initialAddress":null,

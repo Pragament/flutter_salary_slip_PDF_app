@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_template/navigation/base/app_router.dart';  // Your GoRouter setup
@@ -27,6 +28,9 @@ class TemplateApp extends StatelessWidget {
                 ? buildTheme(darkDynamic.harmonized())
                 : material3DarkTheme;
             return MaterialApp.router(
+              locale: context.locale,
+              localizationsDelegates: context.localizationDelegates,
+              supportedLocales: context.supportedLocales,
               routerConfig: router,  // Set routerConfig directly here
               theme: lightTheme,
               darkTheme: darkTheme,

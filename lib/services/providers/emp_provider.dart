@@ -57,7 +57,9 @@ class EmployeeNotifier extends StateNotifier<List<Employee>?> {
 
   // Delete an employee from a group
   void deleteEmployee(String organizationId, String branchId, String groupId, String employeeId) {
+    print(state.toString());
     _employeeRepository.deleteEmployee(organizationId, branchId, groupId, employeeId);
     state = _employeeRepository.getAll(organizationId, branchId, groupId);
+    print(state.toString());
   }
 }

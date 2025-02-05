@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -103,20 +104,20 @@ class _ManageBusinessPageState extends State<ManageBusinessPage> {
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              "Add Business Logo",
+             Text(
+              "addLogo".tr(),
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
 
             // Company Name, Address, Email, Phone fields
-            _buildTextField("Company Name", 10 ,_companyNameController),
+            _buildTextField("companyName".tr(), 10 ,_companyNameController),
             const SizedBox(height: 8),
-            _buildTextField("Address", 72,_addressController, maxLines: 2),
+            _buildTextField("address".tr(), 72,_addressController, maxLines: 2),
             const SizedBox(height: 8),
-            _buildTextField("Email",91 ,_emailController),
+            _buildTextField("email".tr(),91 ,_emailController),
             const SizedBox(height: 8),
-            _buildTextField("Phone",85 ,_phoneController),
+            _buildTextField("phone".tr(),85 ,_phoneController),
             const SizedBox(height: 16),
 
             // Dynamic Fields Section (Integrated with DynamicFieldsEditor)
@@ -138,7 +139,7 @@ class _ManageBusinessPageState extends State<ManageBusinessPage> {
                 );
                 context.pop();
               },
-              child: const Text("SAVE", style: TextStyle(fontSize: 18, color: Colors.white)),
+              child:  Text("save".tr(), style: TextStyle(fontSize: 18, color: Colors.white)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
                 minimumSize: const Size(double.infinity, 50),

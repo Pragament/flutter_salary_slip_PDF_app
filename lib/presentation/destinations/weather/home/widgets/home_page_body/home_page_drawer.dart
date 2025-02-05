@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_template/services/providers/branch_provider.dart';
@@ -26,7 +27,7 @@ Drawer myDrawer(BuildContext context, WidgetRef ref) {
         DrawerHeader(
           child: Center(
             child: Text(
-              'Business Management',
+              'manageBuss'.tr(),
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -39,7 +40,7 @@ Drawer myDrawer(BuildContext context, WidgetRef ref) {
 
         // Home Navigation
         ListTile(
-          title: Text('Home'),
+          title: Text('homePageTitle'.tr()),
           onTap: () async {
             context.go('/');
           },
@@ -50,12 +51,12 @@ Drawer myDrawer(BuildContext context, WidgetRef ref) {
               title: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(currentOrg?.name ?? "No Business"),
+                  Text(currentOrg?.name ?? "noOrg".tr()),
                   IconButton(
                     icon: const Icon(Icons.swap_horiz),
                     onPressed: () {
                       context.push('/switch-organization',extra: {
-                        "title":"Switch Organization",
+                        "title":"switchOrg".tr(),
                         "items":ref.watch(organizationProvider),
                         "onSwitch":(dynamic org){
                           ref.read(currentOrganizationProvider.notifier).setOrganization(org);
@@ -70,12 +71,12 @@ Drawer myDrawer(BuildContext context, WidgetRef ref) {
               title: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(currentBranch?.name??"No Branch"),
+                  Text(currentBranch?.name??"noBranch".tr()),
                   IconButton(
                     icon: const Icon(Icons.swap_horiz),
                     onPressed: () {
                       context.push('/switch-branch',extra: {
-                        "title":"Switch Branch",
+                        "title":"switchBr".tr(),
                         "items":ref.watch(branchProvider),
                         "onSwitch":(dynamic br){
                           ref.read(currentBranchProvider.notifier).setBranch(br);
@@ -90,12 +91,12 @@ Drawer myDrawer(BuildContext context, WidgetRef ref) {
               title: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(currentGroup?.name??"No Group"),
+                  Text(currentGroup?.name??"noGrp".tr()),
                   IconButton(
                     icon: const Icon(Icons.swap_horiz),
                     onPressed: () {
                       context.push('/switch-group',extra: {
-                        "title":"Switch Group",
+                        "title":"switchGrp".tr(),
                         "items":ref.watch(groupProvider),
                         "onSwitch":(dynamic  grp){
                           ref.read(currentGroupProvider.notifier).setGroup(grp);
@@ -113,25 +114,25 @@ Drawer myDrawer(BuildContext context, WidgetRef ref) {
 
         // Management Sections (Organizations, Branches, Groups)
         ListTile(
-          title: Text('Manage Organizations'),
+          title: Text('manageOrgs'.tr()),
           onTap: () {
             context.push('/manage-organizations');
           },
         ),
         ListTile(
-          title: Text('Manage Branches'),
+          title: Text('manageBr'.tr()),
           onTap: () {
             context.push('/manage-branches');
           },
         ),
         ListTile(
-          title: Text('Manage Groups'),
+          title: Text('manageGrp'.tr()),
           onTap: () {
             context.push('/manage-groups');
           },
         ),
         ListTile(
-          title: Text('Manage Employees'),
+          title: Text('manageEmp'.tr()),
           onTap: () {
             context.push('/manage-employees');
           },

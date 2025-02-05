@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/dynamic_fields_widget.dart';
@@ -56,17 +57,17 @@ class _CreateEditEmployeePageState extends State<CreateEditEmployeePage> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              _buildTextField("Name", _nameController),
-              _buildTextField("Phone", _phoneController),
-              _buildTextField("Email", _emailController),
+              _buildTextField("name".tr(), _nameController),
+              _buildTextField("phone".tr(), _phoneController),
+              _buildTextField("email".tr(), _emailController),
               const SizedBox(height: 16),
-          
+
               // Dynamic Fields Section (Integrated with DynamicFieldsEditor)
               DynamicFieldsEditor(
                 initialFields: dynamicFields,
                 onFieldsChanged: _onFieldsChanged,
               ),
-          
+
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () {
@@ -78,7 +79,7 @@ class _CreateEditEmployeePageState extends State<CreateEditEmployeePage> {
                   );
                   context.pop();
                 },
-                child: const Text("SAVE", style: TextStyle(fontSize: 18, color: Colors.white)),
+                child:  Text("save".tr(), style: TextStyle(fontSize: 18, color: Colors.white)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue,
                   minimumSize: const Size(double.infinity, 50),
@@ -95,20 +96,23 @@ class _CreateEditEmployeePageState extends State<CreateEditEmployeePage> {
   }
 
   Widget _buildTextField(String label, TextEditingController controller) {
-    return Row(
-      children: [
-        Text(label, style: const TextStyle(fontSize: 16)),
-        const SizedBox(width: 16),
-        Expanded(
-          child: TextField(
-            controller: controller,
-            decoration: InputDecoration(
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0)),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    return Padding(
+      padding: EdgeInsets.all(10),
+      child: Row(
+        children: [
+          Text(label, style: const TextStyle(fontSize: 16)),
+          const SizedBox(width: 16),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              decoration: InputDecoration(
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

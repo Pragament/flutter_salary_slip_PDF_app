@@ -11,7 +11,7 @@ import 'package:flutter_template/foundation/logger/logger.dart';
 import 'package:flutter_template/interactor/di/interactor_module.dart';
 import 'package:flutter_template/navigation/di/navigation_module.dart';
 import 'package:flutter_template/presentation/di/presentation_module.dart';
-import 'package:flutter_template/presentation/intl/translations/translation_loader.dart';
+import 'package:flutter_template/generated/codegen_loader.g.dart';
 import 'package:flutter_template/presentation/template_app.dart';
 import 'package:flutter_template/repository/di/repository_module.dart';
 import 'package:flutter_template/services/base/database/hive_manager/models.dart';
@@ -23,6 +23,7 @@ import 'package:hive_flutter/adapters.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void startApp() async {
+
   await initialiseApp();
 
   // Add fonts license
@@ -33,7 +34,7 @@ void startApp() async {
 
   runApp(
     EasyLocalization(
-      supportedLocales: const [Locale("en", "US"), Locale("hi", "IN")],
+      supportedLocales: const [Locale("en", "US"), Locale("hi", "IN"),Locale("te","IN")],
       path: "assets/translations",
       fallbackLocale: const Locale("en", "US"),
       assetLoader: const CodegenLoader(),
