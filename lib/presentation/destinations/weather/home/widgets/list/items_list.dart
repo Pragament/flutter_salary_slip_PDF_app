@@ -91,7 +91,7 @@ class _ItemsListState extends ConsumerState<ItemsList> {
                     elevation: 3,
                     color: Colors.grey.shade100,
                     child: ListTile(
-                      title: Text(_filteredItems[index].name),
+                      title: Text(_filteredItems[index].name,style: TextStyle(color: Colors.black)),
                       onTap: () {
                         widget.onSwitch(_filteredItems[index]);
                         context.pop();

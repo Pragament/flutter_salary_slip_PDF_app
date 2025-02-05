@@ -38,7 +38,7 @@ class _OrganizationScreenState extends ConsumerState<ManageOrganizationsScreen> 
               color: Colors.grey.shade100,
               elevation: 3,
               child: ListTile(
-                title: Text(organization.name),
+                title: Text(organization.name,style: TextStyle(color: Colors.black)),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [

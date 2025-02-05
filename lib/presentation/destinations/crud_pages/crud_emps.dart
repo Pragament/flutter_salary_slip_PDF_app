@@ -48,8 +48,8 @@ class _ManageBranchesScreenState extends ConsumerState<ManageEmployeesScreen> {
               elevation: 3,
               color: Colors.grey.shade100,
               child: ListTile(
-                title: Text(employee.name),
-                subtitle: Text(employee.email),
+                title: Text(employee.name,style: TextStyle(color: Colors.black)),
+                subtitle: Text(employee.email,style: TextStyle(color: Colors.black)),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
