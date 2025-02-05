@@ -45,7 +45,7 @@ class _ManageBranchesScreenState extends ConsumerState<ManageGroupsScreen> {
               elevation: 3,
               color: Colors.grey.shade100,
               child: ListTile(
-                title: Text(group.name),
+                title: Text(group.name,style: TextStyle(color: Colors.black),),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
