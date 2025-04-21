@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +9,8 @@ import '../../../services/providers/cur_branch_provider.dart';
 import '../../../services/providers/cur_group_provider.dart';
 import '../../../services/providers/cur_org_provider.dart';
 import '../../../services/providers/emp_provider.dart';
+import '../../../services/csv/employee_csv_service.dart';
+import '../../../services/providers/csv_service_provider.dart';
 
 class ManageEmployeesScreen extends ConsumerStatefulWidget {
   const ManageEmployeesScreen({super.key});
@@ -71,20 +74,7 @@ class _ManageBranchesScreenState extends ConsumerState<ManageEmployeesScreen> {
                                     currentGroup.id,
                                     updatedEmployee);
                               },
-                            })
-                          // _openCreateEditDialog(
-                          //   context,
-                          //   groupId: currentGroup.id,
-                          //   employee: employee,
-                          //   onSave: (name, phone, email, fields) {
-                          //     final updatedEmployee =
-                          //     Employee(name, phone, email, fields, employee.id);
-                          //     ref
-                          //         .read(employeeProvider.notifier)
-                          //         .updateEmployee(currentOrg!.id, currentBranch!.id,
-                          //         currentGroup.id, updatedEmployee);
-                          //   },
-                          // ),
+                            }),
                     ),
                     IconButton(
                       icon: Icon(Icons.delete),
@@ -102,55 +92,101 @@ class _ManageBranchesScreenState extends ConsumerState<ManageEmployeesScreen> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () =>context.push("/create-edit-emp",extra: {
-          "title":"createEmp".tr(),
-          'initialName': null,
-          'initialPhone': null,
-          'initialEmail': null,
-          'initialDynamicFields': null,
-            "onSave": (name, phone, email, fields) {
-              final newEmployee = Employee(
-                  name, phone, email, fields, generateId());
-              ref.read(employeeProvider.notifier).addEmployee(
-                  currentOrg!.id, currentBranch!.id, currentGroup.id,
-                  newEmployee);
-            },
-        }),
-            // _openCreateEditDialog(
-            //   context,
-            //   groupId: currentGroup.id,
-            //   onSave: (name, phone, email, fields) {
-            //     final newEmployee = Employee(
-            //         name, phone, email, fields, generateId());
-            //     ref.read(employeeProvider.notifier).addEmployee(
-            //         currentOrg!.id, currentBranch!.id, currentGroup.id,
-            //         newEmployee);
-            //   },
-            // ),
-        child: Icon(Icons.add),
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          // CSV Import button
+          FloatingActionButton(
+            heroTag: 'import_csv',
+            onPressed: _importEmployeesFromCsv,
+            tooltip: 'Import from CSV',
+            child: const Icon(Icons.upload_file),
+          ),
+          const SizedBox(height: 16),
+          // Add employee button
+          FloatingActionButton(
+            heroTag: 'add_employee',
+            onPressed: () => context.push("/create-edit-emp", extra: {
+              "title": "createEmp".tr(),
+              'initialName': null,
+              'initialPhone': null,
+              'initialEmail': null,
+              'initialDynamicFields': null,
+              "onSave": (name, phone, email, fields) {
+                final newEmployee = Employee(
+                    name, phone, email, fields, generateId());
+                ref.read(employeeProvider.notifier).addEmployee(
+                    currentOrg!.id, currentBranch!.id, currentGroup.id,
+                    newEmployee);
+              },
+            }),
+            child: Icon(Icons.add),
+          ),
+        ],
       ),
     );
   }
-  //
-  // void _openCreateEditDialog(BuildContext context,
-  //     {required String groupId,
-  //       Employee? employee,
-  //       required void Function(
-  //           String name, String phone, String email, Map<String, String> fields)
-  //       onSave}) {
-  //   showDialog(
-  //     context: context,
-  //     builder: (context) {
-  //       return CreateEditEmployeePage(
-  //         title: employee == null ? "Create Employee" : "Edit Employee",
-  //         initialName: employee?.name,
-  //         initialPhone: employee?.phone,
-  //         initialEmail: employee?.email,
-  //         initialDynamicFields: employee?.dynamicFields,
-  //         onSubmit: onSave,
-  //       );
-  //     },
-  //   );
-  // }
+  
+  Future<void> _importEmployeesFromCsv() async {
+    final currentGroup = ref.read(currentGroupProvider);
+    final currentBranch = ref.read(currentBranchProvider);
+    final currentOrg = ref.read(currentOrganizationProvider);
+    
+    if (currentGroup == null || currentBranch == null || currentOrg == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("noGrpSelected".tr())),
+      );
+      return;
+    }
+    
+    final csvService = ref.read(csvServiceProvider);
+    
+    try {
+      // Show file picker
+      final file = await csvService.pickCsvFile();
+      if (file == null) return;
+      
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 20),
+              Text('Importing employees...'),
+            ],
+          ),
+        ),
+      );
+      
+      // Parse CSV
+      final employeesData = await csvService.parseEmployeesCsv(file);
+      
+      // Import employees
+      await ref.read(employeeProvider.notifier).importEmployeesFromCsvData(
+        currentOrg.id,
+        currentBranch.id,
+        currentGroup.id,
+        employeesData,
+      );
+      
+      // Hide loading indicator
+      if (Navigator.canPop(context)) Navigator.pop(context);
+      
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${employeesData.length} employees imported successfully')),
+      );
+    } catch (e) {
+      // Hide loading indicator if still showing
+      if (Navigator.canPop(context)) Navigator.pop(context);
+      
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
+    }
+  }
 }
