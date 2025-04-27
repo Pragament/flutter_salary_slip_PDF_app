@@ -7,6 +7,7 @@ import 'package:flutter_template/presentation/destinations/crud_pages/dialogs/cr
 import 'package:flutter_template/presentation/destinations/crud_pages/crud_emps.dart';
 import 'package:flutter_template/presentation/destinations/weather/home/home_page.dart';
 import 'package:flutter_template/presentation/destinations/weather/home/widgets/list/items_list.dart';
+import 'package:flutter_template/screens/create_edit_employee_screen.dart';
 import 'package:go_router/go_router.dart';
 
 
@@ -87,18 +88,19 @@ final router = GoRouter(
             onSubmit: args["onSave"]);
       } ,
     ),
-    GoRoute(
+   GoRoute(
       path: '/create-edit-emp',
       builder: (context, state) {
-        Map<String,dynamic> args=state.extra as Map<String,dynamic>;
-        return CreateEditEmployeePage(title: args["title"],
-            onSubmit: args["onSave"],
-          initialDynamicFields: args["initialDynamicFields"],
-          initialName: args["initialName"],
-          initialEmail: args["initialEmail"],
-          initialPhone: args["initialPhone"],
+        final Map<String, dynamic> extra = state.extra as Map<String, dynamic>;
+        return CreateEditEmployeeScreen(
+          title: extra['title'] as String,
+          initialName: extra['initialName'] as String?,
+          initialPhone: extra['initialPhone'] as String?,
+          initialEmail: extra['initialEmail'] as String?,
+          initialDynamicFields: extra['initialDynamicFields'] as Map<String, Map<String, String>>?,
+          onSave: extra['onSave'] as Function(String, String, String, Map<String, Map<String, String>>),
         );
-        } ,
+      },
     ),
   ],
 );

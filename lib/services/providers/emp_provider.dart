@@ -71,27 +71,25 @@ class EmployeeNotifier extends StateNotifier<List<Employee>?> {
   List<Map<String, dynamic>> employeesData
 ) async {
   for (final data in employeesData) {
-    // Get dynamic fields as Map<String, String>
-    final dynamicFieldsFromCsv = data.remove('dynamicFields') as Map<String, String>;
+    // Extract core properties
+    final name = data['name'] as String? ?? '';
+    final phone = data['phone'] as String? ?? '';
+    final email = data['email'] as String? ?? '';
+    
+    // Extract dynamic fields
+    final dynamicFields = data['dynamicFields'] as Map<String, String>;
+    
+    // Format dynamic fields for storage - group all CSV fields under 'csvImported' category
+    Map<String, Map<String, String>> formattedDynamicFields = {
+      'csvImported': dynamicFields,
+    };
 
-    // Check your Employee constructor - if it requires Map<String, Map<String, String>>
-    // we need to convert the format of dynamicFields
-    Map<String, Map<String, String>> formattedDynamicFields = {};
-
-    // Option 1: If your employee stores fields in categories (most likely the case)
-    formattedDynamicFields = {'csvImported': dynamicFieldsFromCsv};
-
-    // Option 2 (less likely): If each field needs its own map
-    // for (var entry in dynamicFieldsFromCsv.entries) {
-    //   formattedDynamicFields[entry.key] = {'value': entry.value};
-    // }
-
-    // Create a new employee from CSV data
+    // Create a new employee
     final employee = Employee(
-      data['name'] ?? '',
-      data['phone'] ?? '',
-      data['email'] ?? '',
-      formattedDynamicFields, // Pass the correctly formatted dynamic fields
+      name,
+      phone,
+      email,
+      formattedDynamicFields,
       generateId(),
     );
 
