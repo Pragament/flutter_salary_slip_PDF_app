@@ -21,6 +21,27 @@ class ManageEmployeesScreen extends ConsumerStatefulWidget {
 
 class _ManageBranchesScreenState extends ConsumerState<ManageEmployeesScreen> {
 
+  // Function to show prominent message
+  void _showMessage(String message, bool isSuccess) {
+    // Clear any existing SnackBars first
+    ScaffoldMessenger.of(context).clearSnackBars();
+    
+    // Show the new SnackBar
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+          ),
+        ),
+        backgroundColor: isSuccess ? Colors.green : Colors.red,
+        duration: Duration(seconds: 3),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentGroup = ref.watch(currentGroupProvider);
@@ -78,12 +99,20 @@ class _ManageBranchesScreenState extends ConsumerState<ManageEmployeesScreen> {
                     ),
                     IconButton(
                       icon: Icon(Icons.delete),
-                      onPressed: () =>
-                          ref
-                              .read(employeeProvider.notifier)
-                              .deleteEmployee(
-                              currentOrg!.id, currentBranch!.id, currentGroup.id,
-                              employee.id),
+                      onPressed: () {
+                        // Delete the employee
+                        ref
+                            .read(employeeProvider.notifier)
+                            .deleteEmployee(
+                            currentOrg!.id, currentBranch!.id, currentGroup.id,
+                            employee.id);
+                        
+                        // Show success message
+                        _showMessage('Employee deleted successfully', false);
+                        
+                        // Force UI refresh
+                        setState(() {});
+                      },
                     ),
                   ],
                 ),
@@ -133,9 +162,7 @@ class _ManageBranchesScreenState extends ConsumerState<ManageEmployeesScreen> {
     final currentOrg = ref.read(currentOrganizationProvider);
     
     if (currentGroup == null || currentBranch == null || currentOrg == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("noGrpSelected".tr())),
-      );
+      _showMessage("Please select organization, branch and group first", false);
       return;
     }
     
@@ -146,7 +173,34 @@ class _ManageBranchesScreenState extends ConsumerState<ManageEmployeesScreen> {
       final file = await csvService.pickCsvFile();
       if (file == null) return;
       
-      // Show loading indicator
+      // Show loading indicator for headers extraction
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 20),
+              Text('Reading CSV file...'),
+            ],
+          ),
+        ),
+      );
+      
+      // Extract headers from CSV
+      final headers = await csvService.extractCsvHeaders(file);
+      
+      // Hide loading indicator
+      if (Navigator.canPop(context)) Navigator.pop(context);
+      
+      // Show mapping screen
+      final fieldMapping = await csvService.showMappingScreen(context, headers);
+      
+      // If user canceled mapping, exit
+      if (fieldMapping == null) return;
+      
+      // Show loading indicator for import
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -161,8 +215,8 @@ class _ManageBranchesScreenState extends ConsumerState<ManageEmployeesScreen> {
         ),
       );
       
-      // Parse CSV
-      final employeesData = await csvService.parseEmployeesCsv(file);
+      // Parse CSV with the mapping
+      final employeesData = await csvService.parseEmployeesCsv(file, fieldMapping);
       
       // Import employees
       await ref.read(employeeProvider.notifier).importEmployeesFromCsvData(
@@ -176,17 +230,20 @@ class _ManageBranchesScreenState extends ConsumerState<ManageEmployeesScreen> {
       if (Navigator.canPop(context)) Navigator.pop(context);
       
       // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${employeesData.length} employees imported successfully')),
-      );
+      _showMessage('${employeesData.length} employees imported successfully', true);
+      
+      // Force UI refresh
+      setState(() {});
+      
+      // Extra check: Explicitly refresh the employee list
+      ref.refresh(employeeProvider);
+      
     } catch (e) {
       // Hide loading indicator if still showing
       if (Navigator.canPop(context)) Navigator.pop(context);
       
       // Show error message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
-      );
+      _showMessage('Error: ${e.toString()}', false);
     }
   }
 }
