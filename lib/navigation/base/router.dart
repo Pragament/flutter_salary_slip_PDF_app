@@ -24,7 +24,7 @@ Future<String?> _checkAuth(String targetPath) async {
     // Redirect to auth screen with the target path as extra data
     return '/admin-auth';
   }
-  return null; // No redirect needed, already authenticated
+  return null; 
 }
 
 final router = GoRouter(
