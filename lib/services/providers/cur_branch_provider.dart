@@ -24,7 +24,7 @@ final currentBranchProvider = StateNotifierProvider< CurrentBranchNotifier,Branc
       orElse: () => organization.branches!.first, // Provide a fallback branch if needed
     );
   } else {
-    branch = null; // Handle null case explicitly
+    branch = null; 
   }
 
   return CurrentBranchNotifier(box,branch);

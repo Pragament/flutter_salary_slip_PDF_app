@@ -5,7 +5,7 @@ import 'package:hive/hive.dart';
 part 'models.g.dart';
 
 @HiveType(typeId: 0)
-class Employee extends HiveObject{
+class Employee extends HiveObject {
   @HiveField(0)
   final String id;
   @HiveField(1)
@@ -21,7 +21,7 @@ class Employee extends HiveObject{
 }
 
 @HiveType(typeId: 1)
-class Group extends HiveObject{
+class Group extends HiveObject {
   @HiveField(0)
   final String id;
   @HiveField(1)
@@ -35,7 +35,7 @@ class Group extends HiveObject{
 }
 
 @HiveType(typeId: 2)
-class Branch extends HiveObject{
+class Branch extends HiveObject {
   @HiveField(0)
   final String id;
   @HiveField(1)
@@ -49,8 +49,7 @@ class Branch extends HiveObject{
 }
 
 @HiveType(typeId: 3)
-class Organization extends HiveObject{
-
+class Organization extends HiveObject {
   @HiveField(0)
   final String id;
   @HiveField(1)
@@ -68,7 +67,84 @@ class Organization extends HiveObject{
   @HiveField(7)
   final Uint8List? img;
 
-
   Organization(this.name, this.branches, this.dynamicFields, this.id, this.phone, this.mail, this.address, this.img);
 }
 
+@HiveType(typeId: 4) 
+class AttendanceLog extends HiveObject {
+  @HiveField(0)
+  final String id;
+  
+  @HiveField(1)
+  final String employeeId;
+  
+  @HiveField(2)
+  final DateTime punchInTime;
+  
+  @HiveField(3)
+  final DateTime? punchOutTime;
+  
+  @HiveField(4)
+  final String? punchInImagePath;
+  
+  @HiveField(5)
+  final String? punchOutImagePath;
+  
+  @HiveField(6)
+  final String? notes;
+  
+  @HiveField(7)
+  final String organizationId;
+  
+  @HiveField(8)
+  final String branchId;
+  
+  @HiveField(9)
+  final String groupId;
+
+  AttendanceLog({
+    required this.id,
+    required this.employeeId,
+    required this.punchInTime,
+    this.punchOutTime,
+    this.punchInImagePath,
+    this.punchOutImagePath,
+    this.notes,
+    required this.organizationId,
+    required this.branchId,
+    required this.groupId,
+  });
+  
+  // Calculate duration between punch in and punch out
+  Duration? get duration {
+    if (punchOutTime == null) return null;
+    return punchOutTime!.difference(punchInTime);
+  }
+  
+  // Clone with updated values
+  AttendanceLog copyWith({
+    String? id,
+    String? employeeId,
+    DateTime? punchInTime,
+    DateTime? punchOutTime,
+    String? punchInImagePath,
+    String? punchOutImagePath,
+    String? notes,
+    String? organizationId,
+    String? branchId,
+    String? groupId,
+  }) {
+    return AttendanceLog(
+      id: id ?? this.id,
+      employeeId: employeeId ?? this.employeeId,
+      punchInTime: punchInTime ?? this.punchInTime,
+      punchOutTime: punchOutTime ?? this.punchOutTime,
+      punchInImagePath: punchInImagePath ?? this.punchInImagePath,
+      punchOutImagePath: punchOutImagePath ?? this.punchOutImagePath,
+      notes: notes ?? this.notes,
+      organizationId: organizationId ?? this.organizationId,
+      branchId: branchId ?? this.branchId,
+      groupId: groupId ?? this.groupId,
+    );
+  }
+}
