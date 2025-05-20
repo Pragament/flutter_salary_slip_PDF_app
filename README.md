@@ -12,6 +12,8 @@ dart run build_runner build --delete-conflicting-outputs
 flutter run --flavor dev --dart-define=flavor=dev
 ```
 
+```flutter pub run easy_localization:generate -S assets/translations -O lib/generated```
+
 ## Current app screenshots
 
 <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
