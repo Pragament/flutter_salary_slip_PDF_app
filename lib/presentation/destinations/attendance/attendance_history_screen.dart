@@ -15,47 +15,48 @@ class AttendanceHistoryScreen extends ConsumerStatefulWidget {
   const AttendanceHistoryScreen({super.key});
 
   @override
-  ConsumerState<AttendanceHistoryScreen> createState() => _AttendanceHistoryScreenState();
+  ConsumerState<AttendanceHistoryScreen> createState() =>
+      _AttendanceHistoryScreenState();
 }
 
-class _AttendanceHistoryScreenState extends ConsumerState<AttendanceHistoryScreen> {
+class _AttendanceHistoryScreenState
+    extends ConsumerState<AttendanceHistoryScreen> {
   String? selectedEmployeeId;
   DateTime selectedMonth = DateTime.now();
   bool isLoading = false;
   bool isAdminMode = false;
-  
+
   @override
   void initState() {
     super.initState();
     _loadInitialData();
     _checkAdminStatus();
   }
-  
+
   Future<void> _checkAdminStatus() async {
     final isAdmin = await AdminSecurity().isAdmin();
     setState(() {
       isAdminMode = isAdmin;
     });
   }
-  
+
   Future<void> _loadInitialData() async {
     setState(() {
       isLoading = true;
     });
-    
+
     try {
       final currentOrg = ref.read(currentOrganizationProvider);
       final currentBranch = ref.read(currentBranchProvider);
       final currentGroup = ref.read(currentGroupProvider);
-      
+
       if (currentOrg != null && currentBranch != null && currentGroup != null) {
         await ref.read(attendanceProvider.notifier).loadAttendanceLogsByMonth(
-          currentOrg.id,
-          currentBranch.id,
-          currentGroup.id,
-          selectedMonth.year,
-          selectedMonth.month
-        );
+            currentOrg.id,
+            currentBranch.id,
+            currentGroup.id,
+            selectedMonth.year,
+            selectedMonth.month);
       }
     } catch (e) {
       _showErrorSnackBar('Failed to load attendance data: $e');
@@ -67,7 +68,7 @@ class _AttendanceHistoryScreenState extends ConsumerState<AttendanceHistoryScree
       }
     }
   }
-  
+
   void _showSnackBar(String message, {bool isSuccess = true}) {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
@@ -78,11 +79,11 @@ class _AttendanceHistoryScreenState extends ConsumerState<AttendanceHistoryScree
       ),
     );
   }
-  
+
   void _showErrorSnackBar(String message) {
     _showSnackBar(message, isSuccess: false);
   }
-  
+
   Future<void> _filterByMonth() async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -102,45 +103,43 @@ class _AttendanceHistoryScreenState extends ConsumerState<AttendanceHistoryScree
         );
       },
     );
-    
+
     if (picked != null) {
       setState(() {
         selectedMonth = DateTime(picked.year, picked.month);
       });
-      
+
       await _refreshData();
     }
   }
-  
+
   Future<void> _refreshData() async {
     setState(() {
       isLoading = true;
     });
-    
+
     try {
       final currentOrg = ref.read(currentOrganizationProvider);
       final currentBranch = ref.read(currentBranchProvider);
       final currentGroup = ref.read(currentGroupProvider);
-      
+
       if (currentOrg == null || currentBranch == null || currentGroup == null) {
         return;
       }
-      
+
       if (selectedEmployeeId != null) {
         await ref.read(attendanceProvider.notifier).loadEmployeeAttendanceLogs(
-          currentOrg.id,
-          currentBranch.id,
-          currentGroup.id,
-          selectedEmployeeId!
-        );
+            currentOrg.id,
+            currentBranch.id,
+            currentGroup.id,
+            selectedEmployeeId!);
       } else {
         await ref.read(attendanceProvider.notifier).loadAttendanceLogsByMonth(
-          currentOrg.id,
-          currentBranch.id,
-          currentGroup.id,
-          selectedMonth.year,
-          selectedMonth.month
-        );
+            currentOrg.id,
+            currentBranch.id,
+            currentGroup.id,
+            selectedMonth.year,
+            selectedMonth.month);
       }
     } catch (e) {
       _showErrorSnackBar('Failed to refresh data: $e');
@@ -152,19 +151,20 @@ class _AttendanceHistoryScreenState extends ConsumerState<AttendanceHistoryScree
       }
     }
   }
-  
+
   Future<void> _deleteAttendanceLog(String logId) async {
     if (!isAdminMode) {
       _showErrorSnackBar('Admin access required');
       return;
     }
-    
+
     // Confirm deletion
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Confirm Delete'),
-        content: const Text('Are you sure you want to delete this attendance record? This action cannot be undone.'),
+        content: const Text(
+            'Are you sure you want to delete this attendance record? This action cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -178,12 +178,12 @@ class _AttendanceHistoryScreenState extends ConsumerState<AttendanceHistoryScree
         ],
       ),
     );
-    
+
     if (confirmed == true) {
       setState(() {
         isLoading = true;
       });
-      
+
       try {
         await ref.read(attendanceProvider.notifier).deleteAttendanceLog(logId);
         _showSnackBar('Attendance record deleted');
@@ -199,7 +199,7 @@ class _AttendanceHistoryScreenState extends ConsumerState<AttendanceHistoryScree
       }
     }
   }
-  
+
   void _viewAttendanceImage(BuildContext context, String imagePath) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -219,13 +219,13 @@ class _AttendanceHistoryScreenState extends ConsumerState<AttendanceHistoryScree
       ),
     );
   }
-  
+
   @override
   Widget build(BuildContext context) {
     final currentGroup = ref.watch(currentGroupProvider);
     final employees = ref.watch(employeeProvider);
     final attendanceLogs = ref.watch(attendanceProvider);
-    
+
     if (currentGroup == null) {
       return Scaffold(
         appBar: AppBar(
@@ -239,7 +239,7 @@ class _AttendanceHistoryScreenState extends ConsumerState<AttendanceHistoryScree
         body: Center(child: Text("noGrpSelected".tr())),
       );
     }
-    
+
     return Scaffold(
       appBar: AppBar(
         title: Text("attendanceHistory".tr()),
@@ -300,9 +300,11 @@ class _AttendanceHistoryScreenState extends ConsumerState<AttendanceHistoryScree
                           ElevatedButton.icon(
                             onPressed: _filterByMonth,
                             icon: const Icon(Icons.calendar_month),
-                            label: Text(DateFormat('MMM yyyy').format(selectedMonth)),
+                            label: Text(
+                                DateFormat('MMM yyyy').format(selectedMonth)),
                             style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 16),
                             ),
                           ),
                         ],
@@ -310,7 +312,7 @@ class _AttendanceHistoryScreenState extends ConsumerState<AttendanceHistoryScree
                     ],
                   ),
                 ),
-                
+
                 // Records
                 Expanded(
                   child: attendanceLogs == null || attendanceLogs.isEmpty
@@ -321,16 +323,17 @@ class _AttendanceHistoryScreenState extends ConsumerState<AttendanceHistoryScree
             ),
     );
   }
-  
-  Widget _buildAttendanceList(List<AttendanceLog> logs, List<Employee>? employees) {
+
+  Widget _buildAttendanceList(
+      List<AttendanceLog> logs, List<Employee>? employees) {
     // Filter logs for selected employee if needed
     final filteredLogs = selectedEmployeeId != null
         ? logs.where((log) => log.employeeId == selectedEmployeeId).toList()
         : logs;
-    
+
     // Sort by most recent first
     filteredLogs.sort((a, b) => b.punchInTime.compareTo(a.punchInTime));
-    
+
     return ListView.builder(
       itemCount: filteredLogs.length,
       itemBuilder: (context, index) {
@@ -338,16 +341,16 @@ class _AttendanceHistoryScreenState extends ConsumerState<AttendanceHistoryScree
       },
     );
   }
-  
+
   Widget _buildAttendanceCard(AttendanceLog log, List<Employee>? employees) {
     // Find employee
     final employee = employees?.firstWhere(
       (e) => e.id == log.employeeId,
       orElse: () => Employee('Unknown', '', '', {}, log.employeeId),
     );
-    
+
     final bool isActive = log.punchOutTime == null;
-    
+
     // Calculate duration if punched out
     String duration = '';
     if (log.punchOutTime != null) {
@@ -356,7 +359,7 @@ class _AttendanceHistoryScreenState extends ConsumerState<AttendanceHistoryScree
       final minutes = diff.inMinutes % 60;
       duration = '$hours h $minutes m';
     }
-    
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Padding(
@@ -380,7 +383,8 @@ class _AttendanceHistoryScreenState extends ConsumerState<AttendanceHistoryScree
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        DateFormat('EEEE, MMMM d, yyyy').format(log.punchInTime),
+                        DateFormat('EEEE, MMMM d, yyyy')
+                            .format(log.punchInTime),
                         style: TextStyle(
                           color: Colors.grey[600],
                           fontSize: 14,
@@ -391,7 +395,8 @@ class _AttendanceHistoryScreenState extends ConsumerState<AttendanceHistoryScree
                 ),
                 if (isActive)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.orange,
                       borderRadius: BorderRadius.circular(12),
@@ -481,7 +486,8 @@ class _AttendanceHistoryScreenState extends ConsumerState<AttendanceHistoryScree
                 ],
               ),
             ),
-            if (log.punchInImagePath != null || log.punchOutImagePath != null) ...[
+            if (log.punchInImagePath != null ||
+                log.punchOutImagePath != null) ...[
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -493,7 +499,8 @@ class _AttendanceHistoryScreenState extends ConsumerState<AttendanceHistoryScree
                           const Text('Punch In Photo'),
                           const SizedBox(height: 4),
                           GestureDetector(
-                            onTap: () => _viewAttendanceImage(context, log.punchInImagePath!),
+                            onTap: () => _viewAttendanceImage(
+                                context, log.punchInImagePath!),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(8),
                               child: Image.file(
@@ -515,7 +522,8 @@ class _AttendanceHistoryScreenState extends ConsumerState<AttendanceHistoryScree
                           const Text('Punch Out Photo'),
                           const SizedBox(height: 4),
                           GestureDetector(
-                            onTap: () => _viewAttendanceImage(context, log.punchOutImagePath!),
+                            onTap: () => _viewAttendanceImage(
+                                context, log.punchOutImagePath!),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(8),
                               child: Image.file(

@@ -16,8 +16,49 @@ class Employee extends HiveObject {
   final String email;
   @HiveField(4)
   final Map<String, Map<String, String>> dynamicFields;
+  @HiveField(5)
+  final List<double>? faceFeatures; // Face recognition features
+  @HiveField(6)
+  final String? profileImagePath; // Path to reference image
 
-  Employee(this.name, this.phone, this.email, this.dynamicFields, this.id);
+  Employee(
+    this.name, 
+    this.phone, 
+    this.email, 
+    this.dynamicFields, 
+    this.id, {
+    this.faceFeatures,
+    this.profileImagePath,
+  });
+
+  // Copy method to update employee with face features
+  Employee copyWith({
+    String? id,
+    String? name,
+    String? phone,
+    String? email,
+    Map<String, Map<String, String>>? dynamicFields,
+    List<double>? faceFeatures,
+    String? profileImagePath,
+  }) {
+    return Employee(
+      name ?? this.name,
+      phone ?? this.phone,
+      email ?? this.email,
+      dynamicFields ?? this.dynamicFields,
+      id ?? this.id,
+      faceFeatures: faceFeatures ?? this.faceFeatures,
+      profileImagePath: profileImagePath ?? this.profileImagePath,
+    );
+  }
+
+  // Check if employee has face recognition trained
+  bool get hasFaceRecognition => faceFeatures != null && faceFeatures!.isNotEmpty;
+
+  @override
+  String toString() {
+    return 'Employee{id: $id, name: $name, phone: $phone, email: $email, hasFaceFeatures: $hasFaceRecognition}';
+  }
 }
 
 @HiveType(typeId: 1)

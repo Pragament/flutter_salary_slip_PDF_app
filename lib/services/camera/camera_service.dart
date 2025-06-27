@@ -10,74 +10,119 @@ class CameraService {
   List<CameraDescription>? cameras;
   CameraController? controller;
   bool _isInitialized = false;
-  
+
+  bool get isInitialized =>
+      _isInitialized && controller?.value.isInitialized == true;
+
   Future<void> initialize() async {
-    if (_isInitialized) return;
-    
+    if (_isInitialized &&
+        controller != null &&
+        controller!.value.isInitialized) {
+      // Already initialized
+      return;
+    }
+
+    // Release any existing controller
+    await disposeCamera();
+
     // Request camera permission
     final status = await Permission.camera.request();
     if (status.isDenied) {
       throw Exception('Camera permission denied');
     }
-    
+
     // Get available cameras
     cameras = await availableCameras();
     if (cameras == null || cameras!.isEmpty) {
       throw Exception('No cameras available');
     }
-    
+
     // Initialize the controller with the front camera
     final frontCamera = cameras!.firstWhere(
       (camera) => camera.lensDirection == CameraLensDirection.front,
       orElse: () => cameras!.first,
     );
-    
+
     controller = CameraController(
       frontCamera,
       ResolutionPreset.medium,
       enableAudio: false,
+      imageFormatGroup: ImageFormatGroup.jpeg,
     );
-    
-    await controller!.initialize();
-    _isInitialized = true;
+
+    try {
+      await controller!.initialize();
+
+      // Optimize camera settings for face recognition
+      try {
+        if (controller!.value.exposureMode != ExposureMode.auto) {
+          await controller!.setExposureMode(ExposureMode.auto);
+        }
+        if (controller!.value.focusMode != FocusMode.auto) {
+          await controller!.setFocusMode(FocusMode.auto);
+        }
+      } catch (e) {
+        debugPrint('Warning: Could not set optimal camera parameters: $e');
+      }
+
+      _isInitialized = true;
+    } catch (e) {
+      debugPrint('Error initializing camera: $e');
+      await disposeCamera();
+      throw Exception('Failed to initialize camera: $e');
+    }
   }
-  
+
   Future<String?> takePicture() async {
     if (!_isInitialized || controller == null) {
-      await initialize();
+      try {
+        await initialize();
+      } catch (e) {
+        debugPrint('Failed to initialize camera before taking picture: $e');
+        return null;
+      }
     }
-    
+
     try {
       // Capture the image
       final XFile image = await controller!.takePicture();
-      
-      // Save to app directory
+
+      // Create a unique file name
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
       final directory = await getApplicationDocumentsDirectory();
-      final String fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final String filePath = path.join(directory.path, 'attendance_images', fileName);
-      
-      // Create directory if it doesn't exist
-      final imageDir = Directory(path.dirname(filePath));
-      if (!await imageDir.exists()) {
-        await imageDir.create(recursive: true);
+      final imagesDir =
+          Directory(path.join(directory.path, 'attendance_images'));
+
+      // Ensure directory exists
+      if (!await imagesDir.exists()) {
+        await imagesDir.create(recursive: true);
       }
-      
-      // Copy the image to the new path
-      final File newFile = File(filePath);
-      await File(image.path).copy(filePath);
-      
-      return filePath;
+
+      // Save image to app documents directory with unique name
+      final newImagePath =
+          path.join(imagesDir.path, 'attendance_$timestamp.jpg');
+      await File(image.path).copy(newImagePath);
+
+      // Delete the original temporary file
+      try {
+        await File(image.path).delete();
+      } catch (e) {
+        debugPrint('Warning: Could not delete temp image: $e');
+      }
+
+      return newImagePath;
     } catch (e) {
-      print('Error taking picture: $e');
+      debugPrint('Error taking picture: $e');
       return null;
     }
   }
-  
-  void disposeCamera() {
+
+  Future<void> disposeCamera() async {
     if (controller != null) {
-      controller!.dispose();
-      _isInitialized = false;
+      await controller!.dispose();
+      controller = null;
     }
+    _isInitialized = false;
   }
 }
 
