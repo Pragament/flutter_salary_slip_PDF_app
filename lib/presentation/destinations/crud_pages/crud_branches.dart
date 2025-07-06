@@ -7,7 +7,6 @@ import '../../../../services/providers/branch_provider.dart';
 import '../../../../services/providers/cur_org_provider.dart';
 import '../../../services/base/database/hive_manager/models.dart';
 import '../../../services/base/id_generator.dart';
-import 'dialogs/crud_page.dart';
 
 
 class ManageBranchesScreen extends ConsumerStatefulWidget {

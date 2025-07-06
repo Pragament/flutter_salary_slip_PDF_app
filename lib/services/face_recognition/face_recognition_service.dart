@@ -153,8 +153,9 @@ class FaceRecognitionService {
 
   Future<void> _testCamera() async {
     try {
-      if (_cameraController == null || !_cameraController!.value.isInitialized)
+      if (_cameraController == null || !_cameraController!.value.isInitialized) {
         return;
+      }
 
       final XFile testImage = await _cameraController!.takePicture();
       await File(testImage.path).delete();
@@ -470,10 +471,12 @@ class FaceRecognitionService {
     if (bbox.left < 10 || bbox.top < 10) return false;
 
     // Orientation check - face should be mostly front-facing
-    if (face.headEulerAngleY != null && face.headEulerAngleY!.abs() > 20)
+    if (face.headEulerAngleY != null && face.headEulerAngleY!.abs() > 20) {
       return false;
-    if (face.headEulerAngleZ != null && face.headEulerAngleZ!.abs() > 20)
+    }
+    if (face.headEulerAngleZ != null && face.headEulerAngleZ!.abs() > 20) {
       return false;
+    }
 
     // Eyes check - at least one eye should be clearly visible/open
     final leftEyeOpen = face.leftEyeOpenProbability ?? 0;

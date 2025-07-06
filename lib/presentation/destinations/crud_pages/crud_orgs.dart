@@ -8,7 +8,7 @@ import '../../../services/base/database/hive_manager/models.dart';
 import '../../../services/base/id_generator.dart';
 
 class ManageOrganizationsScreen extends ConsumerStatefulWidget {
-  const ManageOrganizationsScreen({Key? key}) : super(key: key);
+  const ManageOrganizationsScreen({super.key});
 
   @override
   ConsumerState<ManageOrganizationsScreen> createState() => _OrganizationScreenState();

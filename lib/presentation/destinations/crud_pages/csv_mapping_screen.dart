@@ -6,10 +6,10 @@ class CsvMappingScreen extends StatefulWidget {
   final Function(Map<String, String>) onMappingComplete;
 
   const CsvMappingScreen({
-    Key? key,
+    super.key,
     required this.csvHeaders,
     required this.onMappingComplete,
-  }) : super(key: key);
+  });
 
   @override
   _CsvMappingScreenState createState() => _CsvMappingScreenState();
@@ -208,7 +208,7 @@ class _CsvMappingScreenState extends State<CsvMappingScreen> {
                 ),
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
       floatingActionButton: FloatingActionButton(
@@ -225,8 +225,8 @@ class _CsvMappingScreenState extends State<CsvMappingScreen> {
             );
           }
         },
-        child: Icon(Icons.check),
         tooltip: 'Complete Mapping',
+        child: Icon(Icons.check),
       ),
     );
   }
