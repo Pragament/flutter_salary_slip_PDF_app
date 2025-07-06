@@ -1180,7 +1180,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen>
                   ),
 
                   // Recent attendance section
-                  Container(
+                  SizedBox(
                     height: MediaQuery.of(context).size.height * 0.4,
                     child: attendanceLogs == null || attendanceLogs.isEmpty
                         ? Center(child: Text("noAttendanceRecords".tr()))

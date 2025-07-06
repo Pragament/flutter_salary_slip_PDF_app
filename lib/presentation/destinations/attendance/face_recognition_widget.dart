@@ -9,10 +9,10 @@ class FaceRecognitionWidget extends ConsumerStatefulWidget {
   final bool isActive;
 
   const FaceRecognitionWidget({
-    Key? key,
+    super.key,
     required this.onEmployeeDetected,
     this.isActive = true,
-  }) : super(key: key);
+  });
 
   @override
   ConsumerState<FaceRecognitionWidget> createState() =>

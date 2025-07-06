@@ -6,10 +6,10 @@ class DynamicFieldsEditor extends StatefulWidget {
   final void Function(Map<String, Map<String, String>>) onFieldsChanged;
 
   const DynamicFieldsEditor({
-    Key? key,
+    super.key,
     required this.initialFields,
     required this.onFieldsChanged,
-  }) : super(key: key);
+  });
 
   @override
   _DynamicFieldsEditorState createState() => _DynamicFieldsEditorState();
@@ -28,7 +28,7 @@ class _DynamicFieldsEditorState extends State<DynamicFieldsEditor> {
   void _addField() {
     setState(() {
       String newId = 'Field_${fieldCounter++}';
-      fields[newId] = {'title': 'New Field ${fieldCounter}', 'content': ''};  // Default title and empty content
+      fields[newId] = {'title': 'New Field $fieldCounter', 'content': ''};  // Default title and empty content
     });
     widget.onFieldsChanged(fields);  // Notify parent widget of the update
   }

@@ -179,10 +179,7 @@ class _EmployeeFaceRegistrationScreenState
         recognizedEmployeeId = await faceService.processImageForRecognition();
 
         // If that doesn't work, try direct image processing
-        if (recognizedEmployeeId == null) {
-          // This is a workaround - we'll implement a simple test method
-          recognizedEmployeeId = await _testImageRecognition(imagePath);
-        }
+        recognizedEmployeeId ??= await _testImageRecognition(imagePath);
       } catch (e) {
         debugPrint('Error in face recognition test: $e');
       }

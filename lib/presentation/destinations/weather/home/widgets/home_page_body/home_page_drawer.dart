@@ -137,6 +137,13 @@ Drawer myDrawer(BuildContext context, WidgetRef ref) {
             context.push('/manage-employees');
           },
         ),
+         ListTile(
+          leading: Icon(Icons.password),
+          title: Text('changepassword'),
+          onTap: () {
+            context.push('/change_password');
+          },
+        ),
         ListTile(
           leading: const Icon(Icons.people_alt),
           title: const Text('Attendance'),

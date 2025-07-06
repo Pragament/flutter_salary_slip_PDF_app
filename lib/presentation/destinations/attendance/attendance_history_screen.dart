@@ -1,8 +1,11 @@
 import 'dart:io';
+import 'package:csv/csv.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../../services/base/database/hive_manager/models.dart';
 import '../../../services/providers/attendance_provider.dart';
 import '../../../services/providers/emp_provider.dart';
@@ -200,6 +203,82 @@ class _AttendanceHistoryScreenState
     }
   }
 
+  Future<void> _exportAttendanceCSV() async {
+    final attendanceLogs = ref.read(attendanceProvider);
+    final employees = ref.read(employeeProvider);
+
+    if (attendanceLogs == null || attendanceLogs.isEmpty) {
+      _showSnackBar('No attendance records to export', isSuccess: false);
+      return;
+    }
+
+    // Request permission for Android
+    if (Platform.isAndroid) {
+      final status = await Permission.storage.request();
+      if (!status.isGranted) {
+        _showSnackBar('Storage permission denied', isSuccess: false);
+        return;
+      }
+    }
+
+    final rows = <List<String>>[];
+
+    // Add headers
+    rows.add([
+      'Employee Name',
+      'Date',
+      'In Time',
+      'Out Time',
+      'Duration',
+      'Punch In Image',
+      'Punch Out Image',
+      'Notes'
+    ]);
+
+    for (final log in attendanceLogs) {
+      final emp = employees?.firstWhere(
+        (e) => e.id == log.employeeId,
+        orElse: () => Employee('Unknown', '', '', {}, log.employeeId),
+      );
+
+      final name = emp?.name ?? 'Unknown';
+      final date = DateFormat('yyyy-MM-dd').format(log.punchInTime);
+      final inTime = DateFormat('h:mm a').format(log.punchInTime);
+      final outTime = log.punchOutTime != null
+          ? DateFormat('h:mm a').format(log.punchOutTime!)
+          : '--';
+      final duration = log.punchOutTime != null
+          ? '${log.punchOutTime!.difference(log.punchInTime).inHours}h ${log.punchOutTime!.difference(log.punchInTime).inMinutes % 60}m'
+          : '--';
+
+      rows.add([
+        name,
+        date,
+        inTime,
+        outTime,
+        duration,
+        log.punchInImagePath ?? '',
+        log.punchOutImagePath ?? '',
+        log.notes ?? '',
+      ]);
+    }
+
+    // Convert to CSV
+    final csvData = const ListToCsvConverter().convert(rows);
+
+    // Save file
+    final directory =
+        await getExternalStorageDirectory(); // safer than Downloads
+    final downloadsDir = Directory('/storage/emulated/0/Download');
+    final path =
+        '${downloadsDir.path}/attendance_export_${DateTime.now().millisecondsSinceEpoch}.csv';
+
+    final file = File(path);
+    await file.writeAsString(csvData);
+
+    _showSnackBar('CSV exported to Downloads folder');
+  }
+
   void _viewAttendanceImage(BuildContext context, String imagePath) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -309,6 +388,16 @@ class _AttendanceHistoryScreenState
                           ),
                         ],
                       ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                              onPressed: () {
+                                _exportAttendanceCSV();
+                              },
+                              child: Text('Export as csv',style: TextStyle(color: Colors.red),)),
+                        ],
+                      )
                     ],
                   ),
                 ),
