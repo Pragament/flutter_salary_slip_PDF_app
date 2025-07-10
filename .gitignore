@@ -1,3 +1,6 @@
+# Ignore Android NDK build artifacts
+android/app/.cxx/
+
 # Miscellaneous
 *.class
 *.log
