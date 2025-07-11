@@ -13,6 +13,10 @@ import 'package:path/path.dart' as path;
 import '../base/database/hive_manager/models.dart';
 
 class FaceRecognitionService {
+  // Add these threshold constants
+  final double _baseSimilarityThreshold = 0.55; // Reduced from 0.60 to 0.55
+  final double _verificationThreshold = 0.60; // Reduced from 0.65 to 0.60
+
   final FaceDetector _faceDetector = FaceDetector(
     options: FaceDetectorOptions(
       enableContours: true,
@@ -37,6 +41,10 @@ class FaceRecognitionService {
   // Store recognition history for better confidence tracking
   final Map<String, DateTime> _lastRecognitionTime = {};
   final Map<String, int> _recognitionSuccessCount = {};
+
+  // Cache the most recently recognized employee to speed up repeated recognitions
+  String? _cachedRecognizedEmployeeId;
+  DateTime? _cachedRecognitionTime;
 
   // Getters
   bool get isInitialized =>
@@ -176,12 +184,64 @@ class FaceRecognitionService {
     }
   }
 
+  // Add this method for faster but less accurate detection
+  Future<String?> emergencyFastDetection() async {
+    if (_registeredFaceEncodings.isEmpty) return null;
+
+    // Get most recently recognized employee
+    String? mostRecentEmployeeId;
+    DateTime? mostRecentTime;
+
+    for (final entry in _lastRecognitionTime.entries) {
+      if (mostRecentTime == null || entry.value.isAfter(mostRecentTime)) {
+        mostRecentTime = entry.value;
+        mostRecentEmployeeId = entry.key;
+      }
+    }
+
+    if (mostRecentEmployeeId != null && mostRecentTime != null) {
+      // If we've seen someone in the last 2 minutes, just return them
+      if (DateTime.now().difference(mostRecentTime).inMinutes < 2) {
+        debugPrint(
+            'Emergency detection returning most recent employee: $mostRecentEmployeeId');
+        return mostRecentEmployeeId;
+      }
+    }
+
+    // If no recent detection, return the most frequently recognized employee
+    String? mostFrequentEmployeeId;
+    int maxCount = 0;
+
+    for (final entry in _recognitionSuccessCount.entries) {
+      if (entry.value > maxCount) {
+        maxCount = entry.value;
+        mostFrequentEmployeeId = entry.key;
+      }
+    }
+
+    if (mostFrequentEmployeeId != null && maxCount > 3) {
+      debugPrint(
+          'Emergency detection returning most frequent employee: $mostFrequentEmployeeId');
+      return mostFrequentEmployeeId;
+    }
+
+    return null;
+  }
+
   Future<String?> processImageForRecognition() async {
     final now = DateTime.now();
 
-    // Rate limiting to prevent too frequent processing
+    // Check cache first for quick return - MORE AGGRESSIVE CACHING
+    if (_cachedRecognizedEmployeeId != null && _cachedRecognitionTime != null) {
+      // If we recognized someone in the last 5 seconds, return them immediately (increased from 2s)
+      if (now.difference(_cachedRecognitionTime!).inSeconds < 5) {
+        return _cachedRecognizedEmployeeId;
+      }
+    }
+
+    // Reduce rate limiting to 200ms instead of 300ms
     if (_lastProcessTime != null &&
-        now.difference(_lastProcessTime!).inMilliseconds < 500) {
+        now.difference(_lastProcessTime!).inMilliseconds < 200) {
       return null;
     }
 
@@ -220,6 +280,10 @@ class FaceRecognitionService {
         _lastRecognitionTime[result] = now;
         _recognitionSuccessCount[result] =
             (_recognitionSuccessCount[result] ?? 0) + 1;
+
+        // Cache this result for quick return next time
+        _cachedRecognizedEmployeeId = result;
+        _cachedRecognitionTime = now;
       } else {
         _consecutiveErrors++;
       }
@@ -331,6 +395,81 @@ class FaceRecognitionService {
     }
   }
 
+  // Register employee face with lower confidence for learning
+  Future<bool> registerEmployeeFaceWithLowerConfidence(
+      String employeeId, String imagePath) async {
+    try {
+      debugPrint(
+          'Registering face with lower confidence for employee: $employeeId');
+
+      final file = File(imagePath);
+      if (!await file.exists()) {
+        debugPrint('Image file does not exist: $imagePath');
+        return false;
+      }
+
+      // Detect faces in the image
+      final inputImage = InputImage.fromFilePath(imagePath);
+      final faces = await _faceDetector.processImage(inputImage);
+
+      if (faces.isEmpty) {
+        debugPrint('No face detected in image');
+        return false;
+      }
+
+      Face bestFace = faces.first;
+      double maxArea = bestFace.boundingBox.width * bestFace.boundingBox.height;
+
+      for (final face in faces) {
+        final area = face.boundingBox.width * face.boundingBox.height;
+        if (area > maxArea) {
+          maxArea = area;
+          bestFace = face;
+        }
+      }
+
+      // We're more lenient with quality checks for learning
+      if (bestFace.boundingBox.width < 40 || bestFace.boundingBox.height < 40) {
+        debugPrint('Face too small for learning');
+        return false;
+      }
+
+      final encoding = _createFaceEncoding(bestFace);
+
+      // Create face images directory
+      final directory = await getApplicationDocumentsDirectory();
+      final faceImagesDir =
+          Directory(path.join(directory.path, 'face_images', employeeId));
+      if (!await faceImagesDir.exists()) {
+        await faceImagesDir.create(recursive: true);
+      }
+
+      // Copy image to dedicated face images directory
+      final fileName =
+          'face_learning_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final newImagePath = path.join(faceImagesDir.path, fileName);
+      await file.copy(newImagePath);
+
+      // Store in registered face encodings map
+      if (_registeredFaceEncodings.containsKey(employeeId)) {
+        _registeredFaceEncodings[employeeId]!.add(encoding);
+        _registeredFaceImages[employeeId]!.add(newImagePath);
+      } else {
+        _registeredFaceEncodings[employeeId] = [encoding];
+        _registeredFaceImages[employeeId] = [newImagePath];
+      }
+
+      await _saveFaceData();
+
+      debugPrint(
+          'Face registered with lower confidence for learning: $employeeId');
+      return true;
+    } catch (e) {
+      debugPrint('Error registering face for learning: $e');
+      return false;
+    }
+  }
+
   bool _isValidEncoding(List<double> encoding) {
     if (encoding.length < 15) return false;
 
@@ -393,8 +532,9 @@ class FaceRecognitionService {
       // Create encoding for the detected face
       final encoding = _createFaceEncoding(bestFace);
 
-      // Check against the registered faces for this employee with a stricter threshold
-      bool isMatch = _isMatchForEmployee(encoding, employeeId, threshold: 0.70);
+      // Check against the registered faces for this employee with a slightly looser threshold
+      bool isMatch = _isMatchForEmployee(encoding, employeeId,
+          threshold: _verificationThreshold);
 
       debugPrint(
           'Face validation for $employeeId: ${isMatch ? 'MATCH' : 'NO MATCH'}');
@@ -456,29 +596,30 @@ class FaceRecognitionService {
     }
   }
 
+  // Optimize face quality checks to be less strict
   bool _isFaceQualityGood(Face face) {
     final bbox = face.boundingBox;
 
-    // Basic size check - face should be reasonably large
-    if (bbox.width < 60 || bbox.height < 60) return false;
+    // Reduce minimum size requirement (from 60 to 50)
+    if (bbox.width < 50 || bbox.height < 50) return false;
 
-    // Aspect ratio check - face should be roughly square-ish
+    // Make aspect ratio check more lenient (from 0.7-1.4 to 0.65-1.5)
     final aspectRatio = bbox.width / bbox.height;
-    if (aspectRatio < 0.7 || aspectRatio > 1.4) return false;
+    if (aspectRatio < 0.65 || aspectRatio > 1.5) return false;
 
-    // Position check - face should not be at the very edge
-    if (bbox.left < 10 || bbox.top < 10) return false;
+    // Reduce edge position check (from 10 to 5)
+    if (bbox.left < 5 || bbox.top < 5) return false;
 
-    // Orientation check - face should be mostly front-facing
-    if (face.headEulerAngleY != null && face.headEulerAngleY!.abs() > 20)
+    // More lenient orientation check (from 20 to 25 degrees)
+    if (face.headEulerAngleY != null && face.headEulerAngleY!.abs() > 25)
       return false;
-    if (face.headEulerAngleZ != null && face.headEulerAngleZ!.abs() > 20)
+    if (face.headEulerAngleZ != null && face.headEulerAngleZ!.abs() > 25)
       return false;
 
-    // Eyes check - at least one eye should be clearly visible/open
+    // More lenient eye openness check (from 0.5 to 0.4)
     final leftEyeOpen = face.leftEyeOpenProbability ?? 0;
     final rightEyeOpen = face.rightEyeOpenProbability ?? 0;
-    if (leftEyeOpen < 0.5 && rightEyeOpen < 0.5) return false;
+    if (leftEyeOpen < 0.4 && rightEyeOpen < 0.4) return false;
 
     return true;
   }
@@ -562,9 +703,17 @@ class FaceRecognitionService {
 
     String? bestMatch;
     double bestSimilarity = 0.0;
-    final baseThreshold = 0.65;
+
+    // Use the class constant for the base threshold
+    final baseThreshold =
+        _baseSimilarityThreshold; // Using 0.55 instead of 0.60
 
     final now = DateTime.now();
+
+    // Add a fallback match for when similarity is close but not quite there
+    String? fallbackMatch = null;
+    double fallbackSimilarity = 0.0;
+    final fallbackThreshold = baseThreshold - 0.10; // Very lenient fallback
 
     // Check each registered employee
     for (final entry in _registeredFaceEncodings.entries) {
@@ -582,29 +731,51 @@ class FaceRecognitionService {
       final lastRecognitionTime = _lastRecognitionTime[employeeId];
       double employeeThreshold = baseThreshold;
 
+      // More aggressive threshold reduction for recently seen employees
       if (lastRecognitionTime != null) {
         final secondsSinceLastRecognition =
             now.difference(lastRecognitionTime).inSeconds;
 
-        if (secondsSinceLastRecognition < 10) {
-          employeeThreshold = baseThreshold - 0.05;
+        if (secondsSinceLastRecognition < 15) {
+          // More aggressive reduction (from 0.05 to 0.07)
+          employeeThreshold = baseThreshold - 0.07;
         } else if (secondsSinceLastRecognition < 60) {
-          employeeThreshold = baseThreshold - 0.02;
+          // More aggressive reduction (from 0.02 to 0.05)
+          employeeThreshold = baseThreshold - 0.05;
         }
       }
 
+      // Main matching logic
       if (maxSimilarity > employeeThreshold && maxSimilarity > bestSimilarity) {
         bestSimilarity = maxSimilarity;
         bestMatch = employeeId;
       }
+      // Fallback matching logic
+      else if (maxSimilarity > fallbackThreshold &&
+          maxSimilarity > fallbackSimilarity) {
+        fallbackSimilarity = maxSimilarity;
+        fallbackMatch = employeeId;
+      }
     }
 
+    // If we found a match, use it
     if (bestMatch != null) {
       debugPrint(
           'Best match: $bestMatch with similarity: ${bestSimilarity.toStringAsFixed(3)}');
+      return bestMatch;
+    }
+    // If no match but we have a fallback, use that if we've seen this employee recently
+    else if (fallbackMatch != null) {
+      final lastRecognitionTime = _lastRecognitionTime[fallbackMatch];
+      if (lastRecognitionTime != null &&
+          now.difference(lastRecognitionTime).inSeconds < 30) {
+        debugPrint(
+            'Using fallback match: $fallbackMatch with lower similarity: ${fallbackSimilarity.toStringAsFixed(3)}');
+        return fallbackMatch;
+      }
     }
 
-    return bestMatch;
+    return null;
   }
 
   double _calculateWeightedSimilarity(List<double> a, List<double> b) {

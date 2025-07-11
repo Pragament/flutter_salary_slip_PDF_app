@@ -30,6 +30,8 @@ class _FaceRecognitionWidgetState extends ConsumerState<FaceRecognitionWidget>
   DateTime? _lastSuccessfulRecognition;
   String? _lastDetectedEmployeeId;
   int _confidenceCounter = 0;
+  int _requiredConfidenceCount =
+      1; // Reduce from 2 to 1 for immediate detection
   int _noChangeCounter = 0; // Track frames with no state change
   DateTime? _lastProcessingStartTime;
 
@@ -97,7 +99,7 @@ class _FaceRecognitionWidgetState extends ConsumerState<FaceRecognitionWidget>
   void _recoverFromStuckState() {
     if (!_isMounted) return;
 
-    debugPrint('🔄 Recovering face recognition from stuck state');
+    debugPrint('Recovering face recognition from stuck state');
 
     setState(() {
       _isProcessing = false;
@@ -287,7 +289,7 @@ class _FaceRecognitionWidgetState extends ConsumerState<FaceRecognitionWidget>
     });
 
     _pulseController.repeat(reverse: true);
-    _scheduleNextRecognition(1000);
+    _scheduleNextRecognition(300);
   }
 
   void _scheduleNextRecognition(int intervalMs) {
@@ -302,13 +304,13 @@ class _FaceRecognitionWidgetState extends ConsumerState<FaceRecognitionWidget>
 
   Future<void> _performRecognition() async {
     if (_isProcessing || !_isMounted) {
-      _scheduleNextRecognition(500);
+      _scheduleNextRecognition(200);
       return;
     }
 
     final faceService = ref.read(faceRecognitionServiceProvider);
     if (faceService.isBusy) {
-      _scheduleNextRecognition(500);
+      _scheduleNextRecognition(200);
       return;
     }
 
@@ -338,8 +340,8 @@ class _FaceRecognitionWidgetState extends ConsumerState<FaceRecognitionWidget>
           _lastDetectedEmployeeId = employeeId;
         }
 
-        // Only trigger detection after consistent detections
-        if (_confidenceCounter >= 3) {
+        // Only need 1 detection now for faster response
+        if (_confidenceCounter >= _requiredConfidenceCount) {
           _lastSuccessfulRecognition = DateTime.now();
           _consecutiveFailures = 0;
 
@@ -353,7 +355,7 @@ class _FaceRecognitionWidgetState extends ConsumerState<FaceRecognitionWidget>
           _pulseController.stop();
 
           // Pause for a moment after successful detection
-          _scheduleNextRecognition(3000);
+          _scheduleNextRecognition(800);
         } else {
           // Continue scanning to build confidence
           setState(() {
@@ -361,7 +363,7 @@ class _FaceRecognitionWidgetState extends ConsumerState<FaceRecognitionWidget>
             _isProcessing = false;
             _lastProcessingStartTime = null;
           });
-          _scheduleNextRecognition(500); // Scan quickly to build confidence
+          _scheduleNextRecognition(200);
         }
       } else {
         // No face detected - continue scanning
@@ -376,7 +378,7 @@ class _FaceRecognitionWidgetState extends ConsumerState<FaceRecognitionWidget>
         });
 
         // Continue with normal interval
-        _scheduleNextRecognition(1000);
+        _scheduleNextRecognition(300); // Reduced from 500ms to 300ms
       }
     } catch (e) {
       debugPrint('Error during face recognition: $e');
@@ -394,7 +396,7 @@ class _FaceRecognitionWidgetState extends ConsumerState<FaceRecognitionWidget>
         // Try to recover by reinitializing the camera
         _reinitializeCamera();
       } else {
-        _scheduleNextRecognition(2000);
+        _scheduleNextRecognition(1500); // Reduced from 2000ms to 1500ms
       }
     }
   }
@@ -647,7 +649,7 @@ class _FaceRecognitionWidgetState extends ConsumerState<FaceRecognitionWidget>
         // Confidence indicator for consistent detection
         if (_lastDetectedEmployeeId != null &&
             _confidenceCounter > 0 &&
-            _confidenceCounter < 3)
+            _confidenceCounter < _requiredConfidenceCount)
           Positioned(
             bottom: 30,
             right: 6,
@@ -659,7 +661,7 @@ class _FaceRecognitionWidgetState extends ConsumerState<FaceRecognitionWidget>
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
-                children: List.generate(3, (index) {
+                children: List.generate(_requiredConfidenceCount, (index) {
                   return Container(
                     width: 6,
                     height: 6,
