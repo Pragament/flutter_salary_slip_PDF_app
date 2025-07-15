@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:camera/camera.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,6 +16,14 @@ import '../../../services/providers/cur_org_provider.dart';
 import '../camera/camera_screen.dart';
 import 'face_recognition_widget.dart';
 import '../../../services/face_recognition/face_recognition_service.dart';
+
+// Result class for the face verification failure dialog
+class VerificationDialogResult {
+  final bool proceed;
+  final String? notes;
+
+  VerificationDialogResult({required this.proceed, this.notes});
+}
 
 class AttendanceScreen extends ConsumerStatefulWidget {
   const AttendanceScreen({super.key});
@@ -40,6 +49,11 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen>
     WidgetsBinding.instance.addObserver(this);
     _checkPermissionsAndInitialize();
     _cleanupUnusedResources();
+
+    // Ensure employees are loaded when screen initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _ensureEmployeesLoaded();
+    });
   }
 
   @override
@@ -49,11 +63,30 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // This will run when dependencies (like providers) change
+    _ensureEmployeesLoaded();
+  }
+
+  Future<void> _ensureEmployeesLoaded() async {
+    final employees = ref.read(employeeProvider);
+    if (employees == null || employees.isEmpty) {
+      // Force reload employees
+      await ref.read(employeeProvider.notifier).reloadEmployees();
+      print('Employees reloaded in attendance screen');
+    }
+  }
+
+  @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Handle app lifecycle changes to properly manage camera resources
     if (state == AppLifecycleState.resumed) {
       // App returned to foreground - reinitialize face recognition
       _reinitializeFaceRecognition();
+      // Also ensure employees are loaded
+      _ensureEmployeesLoaded();
     } else if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
       // App going to background - clean up resources
@@ -109,13 +142,13 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen>
     }
   }
 
-  // New: Method to clean up resources
+  // Method to clean up resources
   void _cleanupUnusedResources() {
     // Clear caches and unused files
     _cleanupOldImageFiles();
   }
 
-  // New: Method to clean up old image files
+  // Method to clean up old image files
   Future<void> _cleanupOldImageFiles() async {
     try {
       final directory = await getApplicationDocumentsDirectory();
@@ -334,6 +367,198 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen>
     _showSnackBar(message, isSuccess: false);
   }
 
+  // Smart retry for face recognition when employee detection is slow
+  Future<void> _smartRetryFaceRecognition() async {
+    if (!mounted) return;
+
+    final currentFaceService = ref.read(faceRecognitionServiceProvider);
+
+    // If the service is healthy, just reset error counters
+    if (currentFaceService.isHealthy()) {
+      currentFaceService.resetErrorCounters();
+      _showSnackBar('Face recognition optimized', isSuccess: true);
+      return;
+    }
+
+    // Otherwise do a full restart
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      await currentFaceService.forceDispose();
+
+      // Small delay to ensure clean shutdown
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      // Re-initialize face recognition
+      final cameras = await availableCameras();
+      if (cameras.isNotEmpty) {
+        await currentFaceService.initialize(cameras);
+        await currentFaceService.loadStoredFaceRegistrations();
+      }
+
+      _showSnackBar('Face recognition restarted', isSuccess: true);
+    } catch (e) {
+      _showErrorSnackBar('Failed to restart face recognition: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
+
+  // Dialog shown when verification fails, with option to continue
+  Future<VerificationDialogResult> _showFaceVerificationFailureDialog({
+    required String message,
+    bool allowOverride = true,
+    required bool isSamePersonLikely,
+  }) async {
+    final TextEditingController notesController = TextEditingController();
+
+    final result = await showDialog<VerificationDialogResult>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        insetPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: SingleChildScrollView(
+          // Add scroll view to prevent overflow
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.error_outline, color: Colors.red, size: 24),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Verification Failed',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  message,
+                  style: TextStyle(fontSize: 15),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Possible reasons:',
+                  style: TextStyle(fontWeight: FontWeight.w500, fontSize: 15),
+                ),
+                const SizedBox(height: 8),
+                Text('• Poor lighting conditions'),
+                Text('• Face not clearly visible'),
+                Text('• Appearance changed (beard, glasses, etc.)'),
+                if (!isSamePersonLikely)
+                  Text('• This may not be the same person',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, color: Colors.red)),
+                if (allowOverride && isSamePersonLikely) ...[
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Would you like to continue anyway?',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'This will be recorded in the attendance log.',
+                    style: TextStyle(fontStyle: FontStyle.italic, fontSize: 13),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Notes (required for override)',
+                    style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                  ),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: notesController,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      hintText: 'Example: New glasses',
+                      isDense: true, // Reduces the height of the TextField
+                    ),
+                    maxLines: 2,
+                    minLines: 1,
+                    style: TextStyle(fontSize: 14),
+                  ),
+                ],
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop(VerificationDialogResult(
+                          proceed: false,
+                          notes: null,
+                        ));
+                      },
+                      child: const Text('Cancel'),
+                    ),
+                    const SizedBox(width: 8),
+                    if (allowOverride && isSamePersonLikely)
+                      ElevatedButton(
+                        onPressed: () {
+                          if (notesController.text.trim().isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                    'Please add a note explaining the override'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
+                          Navigator.of(context).pop(VerificationDialogResult(
+                            proceed: true,
+                            notes:
+                                'MANUAL OVERRIDE: ${notesController.text.trim()}',
+                          ));
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                        ),
+                        child: const Text('Continue Anyway'),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    return result ?? VerificationDialogResult(proceed: false);
+  }
+
+  // This method checks if the selected employee matches the recognized employee
+  bool _isSelectionConsistentWithRecognition() {
+    // If there's no recognized employee, no consistency to check
+    if (recognizedEmployeeId == null) return true;
+
+    // If the selected employee is the same as the recognized one, that's consistent
+    return selectedEmployeeId == recognizedEmployeeId;
+  }
+
   Future<void> _handlePunchIn() async {
     if (isProcessingAttendance) return;
 
@@ -344,6 +569,25 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen>
 
     if (selectedEmployeeId == null) {
       _showErrorSnackBar('Please select an employee first');
+      return;
+    }
+
+    // Security check: If we have recognized an employee via face detection,
+    // only allow punch-in for that specific employee
+    bool isSamePersonLikely = _isSelectionConsistentWithRecognition();
+    if (!isSamePersonLikely && recognizedEmployeeId != null) {
+      final employees = ref.read(employeeProvider) ?? [];
+      final selectedEmployee = employees.firstWhere(
+        (e) => e.id == selectedEmployeeId,
+        orElse: () => Employee('Unknown', '', '', {}, selectedEmployeeId!),
+      );
+      final recognizedEmployee = employees.firstWhere(
+        (e) => e.id == recognizedEmployeeId,
+        orElse: () => Employee('Unknown', '', '', {}, recognizedEmployeeId!),
+      );
+
+      _showErrorSnackBar(
+          'Cannot punch in: Face recognition detected ${recognizedEmployee.name} but you selected ${selectedEmployee.name}');
       return;
     }
 
@@ -410,55 +654,76 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen>
       final isValidFace = await faceService.validateEmployeeFaceForAttendance(
           selectedEmployeeId!, imagePath);
 
+      // If face verification fails, give option to continue anyway
+      bool proceedWithPunchIn = isValidFace;
+      String? notes;
+
       if (!isValidFace) {
-        // Delete the invalid image
-        try {
-          await File(imagePath).delete();
-        } catch (e) {
-          debugPrint('Error deleting invalid image: $e');
-        }
+        // Show a dialog offering to continue with a note
+        final manualOverride = await _showFaceVerificationFailureDialog(
+          message:
+              'Face verification failed. The person in the photo does not match the registered face.',
+          allowOverride: true,
+          isSamePersonLikely:
+              true, // Allow override for same employee's failed verification
+        );
 
-        setState(() {
-          isLoading = false;
-        });
-
-        _showErrorSnackBar(
-            'Face verification failed! The person in the photo does not match the selected employee.');
-
-        // Show verification failure dialog with retry option
-        final retry = await _showVerificationFailureDialog();
-        if (retry) {
+        if (manualOverride.proceed) {
+          proceedWithPunchIn = true;
+          notes = manualOverride.notes;
+        } else {
+          // User chose not to override
+          try {
+            await File(imagePath).delete();
+          } catch (e) {
+            debugPrint('Error deleting invalid image: $e');
+          }
           setState(() {
             isLoading = false;
             isProcessingAttendance = false;
           });
-          _handlePunchIn(); // Try again
           return;
         }
-
-        setState(() {
-          isProcessingAttendance = false;
-        });
-        return;
       }
 
-      // Face is valid, proceed with punch-in
-      await ref.read(attendanceProvider.notifier).punchIn(
-          currentOrg.id,
-          currentBranch.id,
-          currentGroup.id,
-          selectedEmployeeId!,
-          imagePath,
-          null);
+      if (proceedWithPunchIn) {
+        // Proceed with punch-in, recording verification status
+        await ref.read(attendanceProvider.notifier).punchIn(
+            currentOrg.id,
+            currentBranch.id,
+            currentGroup.id,
+            selectedEmployeeId!,
+            imagePath,
+            notes,
+            faceVerified: isValidFace);
 
-      _showSnackBar('Successfully punched in!');
+        String message = isValidFace
+            ? 'Successfully punched in!'
+            : 'Punched in (manual override - face verification failed)';
+        _showSnackBar(message);
 
-      // Refresh logs
-      await ref.read(attendanceProvider.notifier).loadRecentAttendanceLogs(
-          currentOrg.id, currentBranch.id, currentGroup.id);
+        // Use the image to improve face recognition if verification failed
+        if (!isValidFace && imagePath != null) {
+          try {
+            // Register this face image for improved recognition
+            // We'll add it with lower confidence
+            await faceService.registerEmployeeFaceWithLowerConfidence(
+                selectedEmployeeId!, imagePath);
+          } catch (e) {
+            debugPrint('Error updating face recognition: $e');
+          }
+        }
 
-      // Clean up resources after successful operation
-      _cleanupUnusedResources();
+        // Refresh logs
+        await ref.read(attendanceProvider.notifier).loadRecentAttendanceLogs(
+            currentOrg.id, currentBranch.id, currentGroup.id);
+
+        // Ensure employees are loaded
+        await _ensureEmployeesLoaded();
+
+        // Clean up resources after successful operation
+        _cleanupUnusedResources();
+      }
     } catch (e) {
       _showErrorSnackBar('Failed to punch in: $e');
     } finally {
@@ -516,6 +781,25 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen>
             Text('• The system will verify your face'),
             Text('• Look directly at the camera'),
             Text('• Ensure good lighting'),
+            if (recognizedEmployeeId != null &&
+                selectedEmployeeId == recognizedEmployeeId) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.green, size: 16),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      'Face already verified',
+                      style: TextStyle(
+                        color: Colors.green[700],
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
         actions: [
@@ -540,55 +824,6 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen>
     );
   }
 
-  // Dialog shown when verification fails
-  Future<bool> _showVerificationFailureDialog() async {
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.error_outline, color: Colors.red),
-            const SizedBox(width: 8),
-            const Text('Verification Failed'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Your face could not be verified. This could be due to:',
-            ),
-            const SizedBox(height: 8),
-            Text('• Poor lighting conditions'),
-            Text('• Face not clearly visible'),
-            Text('• Face doesn\'t match registered employee'),
-            Text('• Camera obstruction'),
-            const SizedBox(height: 12),
-            const Text(
-              'Would you like to try again with better conditions?',
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop(false);
-            },
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop(true);
-            },
-            child: const Text('Try Again'),
-          ),
-        ],
-      ),
-    );
-    return result ?? false;
-  }
-
   Future<Employee?> _getSelectedEmployee() async {
     if (selectedEmployeeId == null) return null;
     final employees = ref.read(employeeProvider) ?? [];
@@ -609,6 +844,25 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen>
 
     if (selectedEmployeeId == null) {
       _showErrorSnackBar('Please select an employee first');
+      return;
+    }
+
+    // Security check: If we have recognized an employee via face detection,
+    // only allow punch-out for that specific employee
+    bool isSamePersonLikely = _isSelectionConsistentWithRecognition();
+    if (!isSamePersonLikely && recognizedEmployeeId != null) {
+      final employees = ref.read(employeeProvider) ?? [];
+      final selectedEmployee = employees.firstWhere(
+        (e) => e.id == selectedEmployeeId,
+        orElse: () => Employee('Unknown', '', '', {}, selectedEmployeeId!),
+      );
+      final recognizedEmployee = employees.firstWhere(
+        (e) => e.id == recognizedEmployeeId,
+        orElse: () => Employee('Unknown', '', '', {}, recognizedEmployeeId!),
+      );
+
+      _showErrorSnackBar(
+          'Cannot punch out: Face recognition detected ${recognizedEmployee.name} but you selected ${selectedEmployee.name}');
       return;
     }
 
@@ -676,50 +930,70 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen>
       final isValidFace = await faceService.validateEmployeeFaceForAttendance(
           selectedEmployeeId!, imagePath);
 
+      // If face verification fails, give option to continue anyway
+      bool proceedWithPunchOut = isValidFace;
+      String? notes;
+
       if (!isValidFace) {
-        try {
-          await File(imagePath).delete();
-        } catch (e) {
-          debugPrint('Error deleting invalid image: $e');
-        }
+        // Show a dialog offering to continue with a note
+        final manualOverride = await _showFaceVerificationFailureDialog(
+          message:
+              'Face verification failed. The person in the photo does not match the registered face.',
+          allowOverride: true,
+          isSamePersonLikely:
+              true, // Allow override for same employee's failed verification
+        );
 
-        setState(() {
-          isLoading = false;
-        });
-
-        _showErrorSnackBar(
-            'Face verification failed! The person in the photo does not match the selected employee.');
-
-        // Show verification failure dialog with retry option
-        final retry = await _showVerificationFailureDialog();
-        if (retry) {
+        if (manualOverride.proceed) {
+          proceedWithPunchOut = true;
+          notes = manualOverride.notes;
+        } else {
+          // User chose not to override
+          try {
+            await File(imagePath).delete();
+          } catch (e) {
+            debugPrint('Error deleting invalid image: $e');
+          }
           setState(() {
             isLoading = false;
             isProcessingAttendance = false;
           });
-          _handlePunchOut();
           return;
         }
-
-        setState(() {
-          isProcessingAttendance = false;
-        });
-        return;
       }
 
-      // Face is valid, proceed with punch-out
-      await ref
-          .read(attendanceProvider.notifier)
-          .punchOut(latestLog.id, imagePath, null);
+      if (proceedWithPunchOut) {
+        // Proceed with punch-out, recording verification status
+        await ref.read(attendanceProvider.notifier).punchOut(
+            latestLog.id, imagePath, notes,
+            faceVerified: isValidFace);
 
-      _showSnackBar('Successfully punched out!');
+        String message = isValidFace
+            ? 'Successfully punched out!'
+            : 'Punched out (manual override - face verification failed)';
+        _showSnackBar(message);
 
-      // Refresh logs
-      await ref.read(attendanceProvider.notifier).loadRecentAttendanceLogs(
-          currentOrg.id, currentBranch.id, currentGroup.id);
+        // Use the image to improve face recognition if verification failed
+        if (!isValidFace && imagePath != null) {
+          try {
+            // Register this face image for improved recognition
+            await faceService.registerEmployeeFaceWithLowerConfidence(
+                selectedEmployeeId!, imagePath);
+          } catch (e) {
+            debugPrint('Error updating face recognition: $e');
+          }
+        }
 
-      // Clean up resources after successful operation
-      _cleanupUnusedResources();
+        // Refresh logs
+        await ref.read(attendanceProvider.notifier).loadRecentAttendanceLogs(
+            currentOrg.id, currentBranch.id, currentGroup.id);
+
+        // Ensure employees are loaded
+        await _ensureEmployeesLoaded();
+
+        // Clean up resources after successful operation
+        _cleanupUnusedResources();
+      }
     } catch (e) {
       _showErrorSnackBar('Failed to punch out: $e');
     } finally {
@@ -777,6 +1051,25 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen>
             Text('• The system will verify your face'),
             Text('• Look directly at the camera'),
             Text('• Ensure good lighting'),
+            if (recognizedEmployeeId != null &&
+                selectedEmployeeId == recognizedEmployeeId) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.green, size: 16),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      'Face already verified',
+                      style: TextStyle(
+                        color: Colors.green[700],
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
         actions: [
@@ -830,6 +1123,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen>
     setState(() {
       selectedEmployeeId = employeeId;
       if (employeeId != recognizedEmployeeId) {
+        // Only clear the recognized employee if user explicitly selects a different employee
         recognizedEmployeeId = null;
       }
     });
@@ -843,11 +1137,255 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen>
     context.go('/attendance/history');
   }
 
+  // Add this method for emergency quick detection that respects security
+  Future<void> _emergencyDetection() async {
+    if (!mounted) return;
+
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final faceService = ref.read(faceRecognitionServiceProvider);
+      final employeeId = await faceService.emergencyFastDetection();
+
+      if (employeeId != null) {
+        _onEmployeeDetected(employeeId);
+        _showSnackBar('Employee detected using historical data',
+            isSuccess: true);
+      } else {
+        _showErrorSnackBar('No employee found in recognition history');
+      }
+    } catch (e) {
+      _showErrorSnackBar('Emergency detection failed: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
+
+  // Updated method to display attendance cards with verification status
+  Widget _buildAttendanceCard(AttendanceLog log, List<Employee>? employees) {
+    final employee =
+        employees?.where((e) => e.id == log.employeeId).firstOrNull ??
+            Employee('Unknown', '', '', {}, log.employeeId);
+
+    final bool isActive = log.punchOutTime == null;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        employee.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        DateFormat('MMM d, yyyy').format(log.punchInTime),
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (isActive)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.orange,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Text(
+                      'Active',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Text(
+                            'In:',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green,
+                              fontSize: 12,
+                            ),
+                          ),
+                          if (log.punchInFaceVerified == false)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 4),
+                              child: Icon(
+                                Icons.warning,
+                                color: Colors.orange[700],
+                                size: 14,
+                              ),
+                            ),
+                        ],
+                      ),
+                      Text(
+                        DateFormat('h:mm a').format(log.punchInTime),
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Text(
+                            'Out:',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.red,
+                              fontSize: 12,
+                            ),
+                          ),
+                          if (log.punchOutTime != null &&
+                              log.punchOutFaceVerified == false)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 4),
+                              child: Icon(
+                                Icons.warning,
+                                color: Colors.orange[700],
+                                size: 14,
+                              ),
+                            ),
+                        ],
+                      ),
+                      Text(
+                        log.punchOutTime != null
+                            ? DateFormat('h:mm a').format(log.punchOutTime!)
+                            : '-- : --',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (log.notes != null &&
+                log.notes!.contains('MANUAL OVERRIDE')) ...[
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.orange[50],
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: Colors.orange[200]!),
+                ),
+                child: Text(
+                  log.notes!,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Colors.orange[800],
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+            ],
+            if (log.punchInImagePath != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  if (log.punchInImagePath != null)
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: Image.file(
+                          File(log.punchInImagePath!),
+                          height: 40,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              height: 40,
+                              color: Colors.grey[300],
+                              child: Center(
+                                child: Icon(Icons.broken_image,
+                                    size: 20, color: Colors.grey[600]),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  if (log.punchInImagePath != null &&
+                      log.punchOutImagePath != null)
+                    const SizedBox(width: 8),
+                  if (log.punchOutImagePath != null)
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: Image.file(
+                          File(log.punchOutImagePath!),
+                          height: 40,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              height: 40,
+                              color: Colors.grey[300],
+                              child: Center(
+                                child: Icon(Icons.broken_image,
+                                    size: 20, color: Colors.grey[600]),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentGroup = ref.watch(currentGroupProvider);
     final employees = ref.watch(employeeProvider);
     final attendanceLogs = ref.watch(attendanceProvider);
+
+    // Performance optimization
+    final shouldOptimizeFaceRecognition =
+        MediaQuery.of(context).size.width < 600;
 
     if (currentGroup == null) {
       return Scaffold(
@@ -919,6 +1457,21 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen>
           onPressed: () => context.go('/'),
         ),
         actions: [
+          // Add emergency buttons
+          IconButton(
+            icon: const Icon(Icons.sync_problem),
+            onPressed: _smartRetryFaceRecognition,
+            tooltip: 'Fix Face Recognition',
+          ),
+          // Original buttons
+          IconButton(
+            icon: const Icon(Icons.people_outline),
+            onPressed: () {
+              _ensureEmployeesLoaded();
+              _showSnackBar('Employee data refreshed');
+            },
+            tooltip: 'Refresh Employee Data',
+          ),
           IconButton(
             icon: Icon(
               Icons.face_retouching_natural,
@@ -942,7 +1495,6 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen>
             onPressed: _viewAttendanceHistory,
             tooltip: 'View History',
           ),
-          // New: Add refresh button to force reinitialize if needed
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _reinitializeFaceRecognition,
@@ -1030,72 +1582,104 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen>
                           if (registeredEmployees > 0 &&
                               employees != null &&
                               employees.isNotEmpty)
-                            Column(
-                              children: [
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    FaceRecognitionWidget(
-                                      isActive: isFaceRecognitionActive,
-                                      onEmployeeDetected: _onEmployeeDetected,
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Icon(
-                                                Icons.face_rounded,
+                            RepaintBoundary(
+                              // Optimize rendering
+                              child: Column(
+                                children: [
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      FaceRecognitionWidget(
+                                        isActive: isFaceRecognitionActive,
+                                        onEmployeeDetected: _onEmployeeDetected,
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.face_rounded,
+                                                  color: isFaceRecognitionActive
+                                                      ? Colors.green
+                                                      : Colors.grey,
+                                                  size: 20,
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: Text(
+                                                    "Face Recognition",
+                                                    style: TextStyle(
+                                                      fontSize: 16,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 6),
+                                            Text(
+                                              isFaceRecognitionActive
+                                                  ? "Looking for registered employee faces..."
+                                                  : "Face recognition is disabled",
+                                              style: TextStyle(
                                                 color: isFaceRecognitionActive
-                                                    ? Colors.green
-                                                    : Colors.grey,
-                                                size: 20,
+                                                    ? Colors.green[700]
+                                                    : Colors.grey[600],
+                                                fontWeight: FontWeight.w500,
+                                                fontSize: 12,
                                               ),
-                                              const SizedBox(width: 8),
-                                              Expanded(
-                                                child: Text(
-                                                  "Face Recognition",
-                                                  style: TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.bold,
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              '$registeredEmployees employees registered',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: Colors.grey[600],
+                                              ),
+                                            ),
+                                            // Add emergency quick detect button for easy access
+                                            if (isFaceRecognitionActive)
+                                              Padding(
+                                                padding: const EdgeInsets.only(
+                                                    top: 8),
+                                                child: ElevatedButton.icon(
+                                                  onPressed:
+                                                      _emergencyDetection,
+                                                  icon: Icon(Icons.bolt,
+                                                      size: 16),
+                                                  label: Text('Quick Detect',
+                                                      style: TextStyle(
+                                                          fontSize: 12)),
+                                                  style:
+                                                      ElevatedButton.styleFrom(
+                                                    backgroundColor:
+                                                        Colors.orange,
+                                                    foregroundColor:
+                                                        Colors.white,
+                                                    padding:
+                                                        EdgeInsets.symmetric(
+                                                            horizontal: 8,
+                                                            vertical: 2),
+                                                    minimumSize: Size(0, 30),
                                                   ),
                                                 ),
                                               ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 6),
-                                          Text(
-                                            isFaceRecognitionActive
-                                                ? "Looking for registered employee faces..."
-                                                : "Face recognition is disabled",
-                                            style: TextStyle(
-                                              color: isFaceRecognitionActive
-                                                  ? Colors.green[700]
-                                                  : Colors.grey[600],
-                                              fontWeight: FontWeight.w500,
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            '$registeredEmployees employees registered',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              color: Colors.grey[600],
-                                            ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
-                                const Divider(),
-                                const SizedBox(height: 12),
-                              ],
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  const Divider(),
+                                  const SizedBox(height: 12),
+                                ],
+                              ),
                             ),
 
                           // Employee selector
@@ -1114,6 +1698,67 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen>
                             ],
                           ),
                           const SizedBox(height: 12),
+
+                          // Add employee data status indicator for debugging
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(8),
+                            margin: const EdgeInsets.only(bottom: 8),
+                            decoration: BoxDecoration(
+                              color: employees == null || employees.isEmpty
+                                  ? Colors.red.shade50
+                                  : Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: employees == null || employees.isEmpty
+                                    ? Colors.red.shade200
+                                    : Colors.green.shade200,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  employees == null || employees.isEmpty
+                                      ? Icons.error_outline
+                                      : Icons.check_circle_outline,
+                                  size: 16,
+                                  color: employees == null || employees.isEmpty
+                                      ? Colors.red
+                                      : Colors.green,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    employees == null
+                                        ? 'Employee data not loaded yet'
+                                        : employees.isEmpty
+                                            ? 'No employees found - tap reload'
+                                            : '${employees.length} employees loaded',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color:
+                                          employees == null || employees.isEmpty
+                                              ? Colors.red.shade800
+                                              : Colors.green.shade800,
+                                    ),
+                                  ),
+                                ),
+                                if (employees == null || employees.isEmpty)
+                                  TextButton.icon(
+                                    onPressed: _ensureEmployeesLoaded,
+                                    icon: const Icon(Icons.refresh, size: 14),
+                                    label: const Text('Reload',
+                                        style: TextStyle(fontSize: 12)),
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 4),
+                                      minimumSize: Size.zero,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+
                           DropdownButtonFormField<String>(
                             decoration: InputDecoration(
                               border: OutlineInputBorder(
@@ -1273,170 +1918,6 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen>
                 ),
         ),
       ],
-    );
-  }
-
-  Widget _buildAttendanceCard(AttendanceLog log, List<Employee>? employees) {
-    final employee =
-        employees?.where((e) => e.id == log.employeeId).firstOrNull ??
-            Employee('Unknown', '', '', {}, log.employeeId);
-
-    final bool isActive = log.punchOutTime == null;
-
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        employee.name,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        DateFormat('MMM d, yyyy').format(log.punchInTime),
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (isActive)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: Colors.orange,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Text(
-                      'Active',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 10,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'In:',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green,
-                          fontSize: 12,
-                        ),
-                      ),
-                      Text(
-                        DateFormat('h:mm a').format(log.punchInTime),
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Out:',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.red,
-                          fontSize: 12,
-                        ),
-                      ),
-                      Text(
-                        log.punchOutTime != null
-                            ? DateFormat('h:mm a').format(log.punchOutTime!)
-                            : '-- : --',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            if (log.punchInImagePath != null) ...[
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  if (log.punchInImagePath != null)
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: Image.file(
-                          File(log.punchInImagePath!),
-                          height: 40,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            // Add error handling for images that fail to load
-                            return Container(
-                              height: 40,
-                              color: Colors.grey[300],
-                              child: Center(
-                                child: Icon(Icons.broken_image,
-                                    size: 20, color: Colors.grey[600]),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  if (log.punchInImagePath != null &&
-                      log.punchOutImagePath != null)
-                    const SizedBox(width: 8),
-                  if (log.punchOutImagePath != null)
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: Image.file(
-                          File(log.punchOutImagePath!),
-                          height: 40,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            // Add error handling for images that fail to load
-                            return Container(
-                              height: 40,
-                              color: Colors.grey[300],
-                              child: Center(
-                                child: Icon(Icons.broken_image,
-                                    size: 20, color: Colors.grey[600]),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ],
-          ],
-        ),
-      ),
     );
   }
 }

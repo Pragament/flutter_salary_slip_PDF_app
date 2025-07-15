@@ -1,5 +1,4 @@
 import 'dart:typed_data';
-
 import 'package:hive/hive.dart';
 
 part 'models.g.dart';
@@ -22,10 +21,10 @@ class Employee extends HiveObject {
   final String? profileImagePath; // Path to reference image
 
   Employee(
-    this.name, 
-    this.phone, 
-    this.email, 
-    this.dynamicFields, 
+    this.name,
+    this.phone,
+    this.email,
+    this.dynamicFields,
     this.id, {
     this.faceFeatures,
     this.profileImagePath,
@@ -53,7 +52,8 @@ class Employee extends HiveObject {
   }
 
   // Check if employee has face recognition trained
-  bool get hasFaceRecognition => faceFeatures != null && faceFeatures!.isNotEmpty;
+  bool get hasFaceRecognition =>
+      faceFeatures != null && faceFeatures!.isNotEmpty;
 
   @override
   String toString() {
@@ -108,40 +108,47 @@ class Organization extends HiveObject {
   @HiveField(7)
   final Uint8List? img;
 
-  Organization(this.name, this.branches, this.dynamicFields, this.id, this.phone, this.mail, this.address, this.img);
+  Organization(this.name, this.branches, this.dynamicFields, this.id,
+      this.phone, this.mail, this.address, this.img);
 }
 
-@HiveType(typeId: 4) 
+@HiveType(typeId: 4)
 class AttendanceLog extends HiveObject {
   @HiveField(0)
   final String id;
-  
+
   @HiveField(1)
   final String employeeId;
-  
+
   @HiveField(2)
   final DateTime punchInTime;
-  
+
   @HiveField(3)
   final DateTime? punchOutTime;
-  
+
   @HiveField(4)
   final String? punchInImagePath;
-  
+
   @HiveField(5)
   final String? punchOutImagePath;
-  
+
   @HiveField(6)
   final String? notes;
-  
+
   @HiveField(7)
   final String organizationId;
-  
+
   @HiveField(8)
   final String branchId;
-  
+
   @HiveField(9)
   final String groupId;
+
+  @HiveField(10)
+  final bool? punchInFaceVerified;
+
+  @HiveField(11)
+  final bool? punchOutFaceVerified;
 
   AttendanceLog({
     required this.id,
@@ -154,14 +161,16 @@ class AttendanceLog extends HiveObject {
     required this.organizationId,
     required this.branchId,
     required this.groupId,
+    this.punchInFaceVerified,
+    this.punchOutFaceVerified,
   });
-  
+
   // Calculate duration between punch in and punch out
   Duration? get duration {
     if (punchOutTime == null) return null;
     return punchOutTime!.difference(punchInTime);
   }
-  
+
   // Clone with updated values
   AttendanceLog copyWith({
     String? id,
@@ -174,6 +183,8 @@ class AttendanceLog extends HiveObject {
     String? organizationId,
     String? branchId,
     String? groupId,
+    bool? punchInFaceVerified,
+    bool? punchOutFaceVerified,
   }) {
     return AttendanceLog(
       id: id ?? this.id,
@@ -186,6 +197,8 @@ class AttendanceLog extends HiveObject {
       organizationId: organizationId ?? this.organizationId,
       branchId: branchId ?? this.branchId,
       groupId: groupId ?? this.groupId,
+      punchInFaceVerified: punchInFaceVerified ?? this.punchInFaceVerified,
+      punchOutFaceVerified: punchOutFaceVerified ?? this.punchOutFaceVerified,
     );
   }
 }
