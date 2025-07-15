@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import '../../../services/base/database/hive_manager/models.dart';
 import '../../../services/providers/attendance_provider.dart';
 import '../../../services/providers/emp_provider.dart';
@@ -204,52 +205,79 @@ class _AttendanceHistoryScreenState
   }
 
   Future<void> _exportAttendanceCSV() async {
-    final attendanceLogs = ref.read(attendanceProvider);
-    final employees = ref.read(employeeProvider);
+  final attendanceLogs = ref.read(attendanceProvider);
+  final employees = ref.read(employeeProvider);
 
-    if (attendanceLogs == null || attendanceLogs.isEmpty) {
-      _showSnackBar('No attendance records to export', isSuccess: false);
-      return;
+  if (attendanceLogs == null || attendanceLogs.isEmpty) {
+    _showSnackBar('No attendance records to export', isSuccess: false);
+    return;
+  }
+
+  // Request storage permission on Android
+  if (Platform.isAndroid) {
+    final deviceInfo = DeviceInfoPlugin();
+    final androidInfo = await deviceInfo.androidInfo;
+    final sdkInt = androidInfo.version.sdkInt;
+
+    PermissionStatus status;
+
+    if (sdkInt >= 30) {
+      status = await Permission.manageExternalStorage.request();
+    } else {
+      status = await Permission.storage.request();
     }
 
-    // Request permission for Android
-    if (Platform.isAndroid) {
-      final status = await Permission.storage.request();
-      if (!status.isGranted) {
-        _showSnackBar('Storage permission denied', isSuccess: false);
-        return;
+    if (!status.isGranted) {
+      _showSnackBar('Storage permission denied', isSuccess: false);
+      return;
+    }
+  }
+
+  try {
+    // Map for quick employee lookup
+    final employeeMap = <String, Employee>{};
+    if (employees != null) {
+      for (final emp in employees) {
+        employeeMap[emp.id] = emp;
       }
     }
 
+    // Formatters (based on local time zone)
+    final dateFormatter = DateFormat('yyyy-MM-dd');
+    final timeFormatter = DateFormat('h:mm a');
+
     final rows = <List<String>>[];
 
-    // Add headers
+    // Header row
     rows.add([
       'Employee Name',
       'Date',
       'In Time',
       'Out Time',
       'Duration',
-      'Punch In Image',
-      'Punch Out Image',
-      'Notes'
     ]);
 
+    // Process attendance logs
     for (final log in attendanceLogs) {
-      final emp = employees?.firstWhere(
-        (e) => e.id == log.employeeId,
-        orElse: () => Employee('Unknown', '', '', {}, log.employeeId),
-      );
-
+      final emp = employeeMap[log.employeeId];
       final name = emp?.name ?? 'Unknown';
-      final date = DateFormat('yyyy-MM-dd').format(log.punchInTime);
-      final inTime = DateFormat('h:mm a').format(log.punchInTime);
-      final outTime = log.punchOutTime != null
-          ? DateFormat('h:mm a').format(log.punchOutTime!)
-          : '--';
-      final duration = log.punchOutTime != null
-          ? '${log.punchOutTime!.difference(log.punchInTime).inHours}h ${log.punchOutTime!.difference(log.punchInTime).inMinutes % 60}m'
-          : '--';
+
+      final localPunchIn = log.punchInTime.toLocal();
+      final date = dateFormatter.format(localPunchIn);
+      final inTime = timeFormatter.format(localPunchIn);
+
+      String outTime = '--';
+      String duration = '--';
+
+      if (log.punchOutTime != null) {
+        final localPunchOut = log.punchOutTime!.toLocal();
+        outTime = timeFormatter.format(localPunchOut);
+
+        final diff = localPunchOut.difference(localPunchIn);
+        final hours = diff.inHours;
+        final minutes = diff.inMinutes % 60;
+        duration = '${hours}h ${minutes}m';
+      }
 
       rows.add([
         name,
@@ -257,27 +285,64 @@ class _AttendanceHistoryScreenState
         inTime,
         outTime,
         duration,
-        log.punchInImagePath ?? '',
-        log.punchOutImagePath ?? '',
-        log.notes ?? '',
       ]);
     }
 
-    // Convert to CSV
+    // Convert to CSV format
     final csvData = const ListToCsvConverter().convert(rows);
 
-    // Save file
-    final directory =
-        await getExternalStorageDirectory(); // safer than Downloads
-    final downloadsDir = Directory('/storage/emulated/0/Download');
-    final path =
-        '${downloadsDir.path}/attendance_export_${DateTime.now().millisecondsSinceEpoch}.csv';
+    final fileName = 'attendance_export_${DateTime.now().millisecondsSinceEpoch}.csv';
+    String? savedPath;
 
-    final file = File(path);
-    await file.writeAsString(csvData);
+    // Known Downloads paths to try
+    final downloadPaths = [
+      '/storage/emulated/0/Download',
+      '/storage/emulated/0/Downloads',
+      '/sdcard/Download',
+      '/sdcard/Downloads',
+    ];
 
-    _showSnackBar('CSV exported to Downloads folder');
+    for (final pathStr in downloadPaths) {
+      try {
+        final dir = Directory(pathStr);
+        if (await dir.exists()) {
+          final file = File('$pathStr/$fileName');
+          await file.writeAsString(csvData);
+          if (await file.exists()) {
+            savedPath = file.path;
+            break;
+          }
+        }
+      } catch (_) {
+        continue;
+      }
+    }
+
+    // Fallback to app-specific folder
+    if (savedPath == null) {
+      final directory = await getExternalStorageDirectory();
+      final file = File('${directory!.path}/$fileName');
+      await file.writeAsString(csvData);
+      if (await file.exists()) {
+        savedPath = file.path;
+      }
+    }
+
+    // Show success message
+    if (savedPath != null) {
+      if (savedPath.contains('/Download')) {
+        _showSnackBar('CSV exported to Downloads folder');
+      } else {
+        _showSnackBar('CSV exported to app folder (Downloads not accessible)');
+      }
+    } else {
+      _showSnackBar('Failed to save CSV file', isSuccess: false);
+    }
+
+  } catch (e) {
+    _showSnackBar('Error exporting CSV: ${e.toString()}', isSuccess: false);
   }
+}
 
   void _viewAttendanceImage(BuildContext context, String imagePath) {
     Navigator.of(context).push(
@@ -395,7 +460,10 @@ class _AttendanceHistoryScreenState
                               onPressed: () {
                                 _exportAttendanceCSV();
                               },
-                              child: Text('Export as csv',style: TextStyle(color: Colors.red),)),
+                              child: Text(
+                                'Export as csv',
+                                style: TextStyle(color: Colors.red),
+                              )),
                         ],
                       )
                     ],

@@ -2,13 +2,13 @@ import 'package:flutter_template/presentation/destinations/attendance/attendance
 import 'package:flutter_template/presentation/destinations/attendance/attendance_history_screen.dart';
 import 'package:flutter_template/presentation/auth/admin_lock_screen.dart';
 import 'package:flutter_template/foundation/security/admin_security.dart';
+import 'package:flutter_template/presentation/destinations/attendance/employee_face_registration_screen.dart';
 import 'package:flutter_template/presentation/destinations/change_password/setnewpasswordscreen.dart';
 import 'package:flutter_template/presentation/destinations/change_password/verifypasswordscreen.dart';
 import 'package:flutter_template/presentation/destinations/crud_pages/crud_branches.dart';
 import 'package:flutter_template/presentation/destinations/crud_pages/crud_groups.dart';
 import 'package:flutter_template/presentation/destinations/crud_pages/crud_orgs.dart';
 import 'package:flutter_template/presentation/destinations/crud_pages/dialogs/crud_business.dart';
-import 'package:flutter_template/presentation/destinations/crud_pages/dialogs/crud_emp_page.dart';
 import 'package:flutter_template/presentation/destinations/crud_pages/dialogs/crud_page.dart';
 import 'package:flutter_template/presentation/destinations/crud_pages/crud_emps.dart';
 import 'package:flutter_template/presentation/destinations/weather/home/home_page.dart';
@@ -26,7 +26,7 @@ Future<String?> _checkAuth(String targetPath) async {
     // Redirect to auth screen with the target path as extra data
     return '/admin-auth';
   }
-  return null; 
+  return null;
 }
 
 final router = GoRouter(
@@ -82,33 +82,43 @@ final router = GoRouter(
       },
       builder: (context, state) => ManageEmployeesScreen(),
     ),
+// GoRoute(
+//   path: '/attendance/face-registration',
+//   builder: (context, state) =>
+// ),
 
     // Switch Organization route
     GoRoute(
-      path: '/switch-organization',
-      builder: (context, state) {
-        Map<String,dynamic> args=state.extra as Map<String,dynamic>;
-        return ItemsList(title: args["title"], items: args["items"], onSwitch: args["onSwitch"]);
-      }
-    ),
+        path: '/switch-organization',
+        builder: (context, state) {
+          Map<String, dynamic> args = state.extra as Map<String, dynamic>;
+          return ItemsList(
+              title: args["title"],
+              items: args["items"],
+              onSwitch: args["onSwitch"]);
+        }),
 
     // Switch Branch route
     GoRoute(
-      path: '/switch-branch',
-      builder: (context, state) {
-        Map<String,dynamic> args=state.extra as Map<String,dynamic>;
-        return ItemsList(title: args["title"], items: args["items"], onSwitch: args["onSwitch"]);
-      }
-    ),
+        path: '/switch-branch',
+        builder: (context, state) {
+          Map<String, dynamic> args = state.extra as Map<String, dynamic>;
+          return ItemsList(
+              title: args["title"],
+              items: args["items"],
+              onSwitch: args["onSwitch"]);
+        }),
 
     // Switch Group route
     GoRoute(
-      path: '/switch-group',
-      builder: (context, state) {
-        Map<String,dynamic> args=state.extra as Map<String,dynamic>;
-        return ItemsList(title: args["title"], items: args["items"], onSwitch: args["onSwitch"]);
-      }
-    ),
+        path: '/switch-group',
+        builder: (context, state) {
+          Map<String, dynamic> args = state.extra as Map<String, dynamic>;
+          return ItemsList(
+              title: args["title"],
+              items: args["items"],
+              onSwitch: args["onSwitch"]);
+        }),
 
     // Create/Edit Page route - protected with auth check
     GoRoute(
@@ -117,16 +127,16 @@ final router = GoRouter(
         return await _checkAuth('/create-edit-page');
       },
       builder: (context, state) {
-        Map<String,dynamic> args=state.extra as Map<String,dynamic>;
+        Map<String, dynamic> args = state.extra as Map<String, dynamic>;
         return CreateEditPage(
-          title: args["title"], 
+          title: args["title"],
           onSubmit: args["onSave"],
           initialName: args["initialName"],
           initialDynamicFields: args["initialDynamicFields"],
         );
       },
     ),
-    
+
     // Create/Edit Organization route - protected with auth check
     GoRoute(
       path: '/create-edit-org',
@@ -134,7 +144,7 @@ final router = GoRouter(
         return await _checkAuth('/create-edit-org');
       },
       builder: (context, state) {
-        Map<String,dynamic> args=state.extra as Map<String,dynamic>;
+        Map<String, dynamic> args = state.extra as Map<String, dynamic>;
         return ManageBusinessPage(
           title: args["title"],
           initialImg: args["initialImg"],
@@ -147,7 +157,7 @@ final router = GoRouter(
         );
       },
     ),
-    
+
     // Create/Edit Employee route - protected with auth check
     GoRoute(
       path: '/create-edit-emp',
@@ -161,24 +171,26 @@ final router = GoRouter(
           initialName: extra['initialName'] as String?,
           initialPhone: extra['initialPhone'] as String?,
           initialEmail: extra['initialEmail'] as String?,
-          initialDynamicFields: extra['initialDynamicFields'] as Map<String, Map<String, String>>?,
-          onSave: extra['onSave'] as Function(String, String, String, Map<String, Map<String, String>>),
+          initialDynamicFields: extra['initialDynamicFields']
+              as Map<String, Map<String, String>>?,
+          onSave: extra['onSave'] as Function(
+              String, String, String, Map<String, Map<String, String>>),
         );
       },
     ),
-    
+
     // Employee Attendance route
     GoRoute(
       path: '/attendance',
       builder: (context, state) => const AttendanceScreen(),
     ),
-    
+
     // Attendance History route
     GoRoute(
       path: '/attendance/history',
       builder: (context, state) => const AttendanceHistoryScreen(),
     ),
-    
+
     // Admin Attendance route - protected with auth check
     GoRoute(
       path: '/admin/attendance',
@@ -187,7 +199,7 @@ final router = GoRouter(
       },
       builder: (context, state) => const AttendanceHistoryScreen(),
     ),
-    
+
     // Admin Settings route - protected with auth check
     GoRoute(
       path: '/admin/settings',
@@ -196,16 +208,19 @@ final router = GoRouter(
       },
       builder: (context, state) => const AdminSettingsScreen(),
     ),
+    GoRoute(
+      path: '/attendance/face-registration',
+      builder: (context, state) => const EmployeeFaceRegistrationScreen(),
+    ),
 
     //change password home screen
     GoRoute(
       path: '/change_password',
-      builder: (context, state) =>  VerifyPasswordScreen(),
-      ),
-     GoRoute(
+      builder: (context, state) => VerifyPasswordScreen(),
+    ),
+    GoRoute(
       path: '/set-new-password',
       builder: (context, state) => const SetNewPasswordScreen(),
     ),
-   
   ],
 );

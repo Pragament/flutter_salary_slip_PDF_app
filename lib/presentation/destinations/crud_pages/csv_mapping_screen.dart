@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:easy_localization/easy_localization.dart';
-
 class CsvMappingScreen extends StatefulWidget {
   final List<String> csvHeaders;
   final Function(Map<String, String>) onMappingComplete;
@@ -12,6 +10,7 @@ class CsvMappingScreen extends StatefulWidget {
   });
 
   @override
+  // ignore: library_private_types_in_public_api
   _CsvMappingScreenState createState() => _CsvMappingScreenState();
 }
 
