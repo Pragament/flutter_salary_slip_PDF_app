@@ -23,8 +23,11 @@ import 'package:flutter_template/services/di/service_module.dart';
 import 'package:get_it/get_it.dart';
 import 'package:hive_flutter/adapters.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 void startApp() async {
+  // Initialize Firebase
+  await Firebase.initializeApp();
   // Clear any previous admin authentication at app startup
   final tempPrefs = await SharedPreferences.getInstance();
   await tempPrefs.setBool('isAdminAuthenticated', false);
