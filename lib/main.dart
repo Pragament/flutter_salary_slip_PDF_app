@@ -3,7 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:mailer/mailer.dart';
-import 'package:mailer/smtp_server/gmail_xoauth2.dart';
+import 'package:mailer/smtp_server/gmail.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'app.dart';
@@ -61,7 +61,7 @@ class _MySignInGateState extends State<MySignInGate> {
       final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
       setState(() { _user = userCredential.user; });
       // Send email to the signed-in user
-      final smtpServer = gmailSmtpXoauth2(_user!.email!, googleAuth.accessToken!);
+      final smtpServer = gmail(_user!.email!, googleAuth.accessToken!);
       final message = Message()
         ..from = Address(_user!.email!, _user!.displayName ?? 'User')
         ..recipients.add(_user!.email!)

@@ -1,7 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:mailer/mailer.dart';
-import 'package:mailer/smtp_server/gmail_xoauth2.dart';
+import 'package:mailer/smtp_server/gmail.dart';
+
 
 class BulkEmailService {
   // Google Sign-In and Firebase Auth
@@ -23,7 +24,10 @@ class BulkEmailService {
     required String accessToken,
     required List<Map<String, String>> employees, // [{name, email, ...}]
   }) async {
-    final smtpServer = gmailSmtpXoauth2(userEmail, accessToken);
+    // If you have a Gmail app password, use gmail(userEmail, appPassword)
+    // If you need XOAUTH2, you must implement it manually or use another package.
+    // For now, using username/password authentication:
+    final smtpServer = gmail(userEmail, 'your-app-password-here');
 
     for (final employee in employees) {
       final message = Message()
