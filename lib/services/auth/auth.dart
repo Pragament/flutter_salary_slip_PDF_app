@@ -3,7 +3,6 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server/gmail.dart';
 
-
 class BulkEmailService {
   // Google Sign-In and Firebase Auth
   Future<UserCredential?> signInWithGoogle() async {

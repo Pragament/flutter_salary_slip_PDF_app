@@ -62,6 +62,7 @@ class _MySignInGateState extends State<MySignInGate> {
       setState(() { _user = userCredential.user; });
       // Send email to the signed-in user
       final smtpServer = gmail(_user!.email!, googleAuth.accessToken!);
+
       final message = Message()
         ..from = Address(_user!.email!, _user!.displayName ?? 'User')
         ..recipients.add(_user!.email!)
