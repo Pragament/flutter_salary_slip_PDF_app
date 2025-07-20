@@ -82,11 +82,22 @@ android {
     }
 
     buildTypes {
-        release {
-            // Only replace with signingConfigs.debug so `flutter run --release` works locally.
-            signingConfig signingConfigs.release
+    release {
+        // Only replace with signingConfigs.debug so `flutter run --release` works locally.
+        signingConfig signingConfigs.release
+
+        minifyEnabled true
+        // Add this line to disable resource shrinking
+        shrinkResources false
+        proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+
+        tasks.whenTaskAdded { task ->
+            if (task.name.contains('R8')) {
+                task.enabled = false
+            }
         }
     }
+}
 
     /*
     Flutter suggested fix:
@@ -115,4 +126,13 @@ dependencies {
     implementation 'androidx.core:core-splashscreen:1.0.0-beta01'
 
     androidTestUtil "androidx.test:orchestrator:1.4.2"
+
+    implementation 'org.tensorflow:tensorflow-lite-gpu:2.8.0'
+
+    implementation(project(':google_mlkit_text_recognition')) {
+        exclude group: 'com.google.mlkit', module: 'text-recognition-chinese'
+        exclude group: 'com.google.mlkit', module: 'text-recognition-devanagari'
+        exclude group: 'com.google.mlkit', module: 'text-recognition-japanese'
+        exclude group: 'com.google.mlkit', module: 'text-recognition-korean'
+    }
 }
