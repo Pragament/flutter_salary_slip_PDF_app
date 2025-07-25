@@ -9,7 +9,7 @@ class SearchPageLoadingShimmer extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: Shimmer.fromColors(
-        baseColor: context.theme.colorScheme.surfaceVariant.withOpacity(0.2),
+        baseColor: context.theme.colorScheme.surfaceContainerHighest.withOpacity(0.2),
         highlightColor:
             context.theme.colorScheme.onSurfaceVariant.withOpacity(0.1),
         period: const Duration(seconds: 1),

@@ -3,11 +3,12 @@ import 'package:flutter_template/presentation/destinations/attendance/attendance
 import 'package:flutter_template/presentation/auth/admin_lock_screen.dart';
 import 'package:flutter_template/foundation/security/admin_security.dart';
 import 'package:flutter_template/presentation/destinations/attendance/employee_face_registration_screen.dart';
+import 'package:flutter_template/presentation/destinations/change_password/setnewpasswordscreen.dart';
+import 'package:flutter_template/presentation/destinations/change_password/verifypasswordscreen.dart';
 import 'package:flutter_template/presentation/destinations/crud_pages/crud_branches.dart';
 import 'package:flutter_template/presentation/destinations/crud_pages/crud_groups.dart';
 import 'package:flutter_template/presentation/destinations/crud_pages/crud_orgs.dart';
 import 'package:flutter_template/presentation/destinations/crud_pages/dialogs/crud_business.dart';
-import 'package:flutter_template/presentation/destinations/crud_pages/dialogs/crud_emp_page.dart';
 import 'package:flutter_template/presentation/destinations/crud_pages/dialogs/crud_page.dart';
 import 'package:flutter_template/presentation/destinations/crud_pages/crud_emps.dart';
 import 'package:flutter_template/presentation/destinations/weather/home/home_page.dart';
@@ -81,6 +82,10 @@ final router = GoRouter(
       },
       builder: (context, state) => ManageEmployeesScreen(),
     ),
+// GoRoute(
+//   path: '/attendance/face-registration',
+//   builder: (context, state) =>
+// ),
 
     // Switch Organization route
     GoRoute(
@@ -195,11 +200,6 @@ final router = GoRouter(
       builder: (context, state) => const AttendanceHistoryScreen(),
     ),
 
-    GoRoute(
-      path: '/attendance/face-registration',
-      builder: (context, state) => const EmployeeFaceRegistrationScreen(),
-    ),
-
     // Admin Settings route - protected with auth check
     GoRoute(
       path: '/admin/settings',
@@ -207,6 +207,20 @@ final router = GoRouter(
         return await _checkAuth('/admin/settings');
       },
       builder: (context, state) => const AdminSettingsScreen(),
+    ),
+    GoRoute(
+      path: '/attendance/face-registration',
+      builder: (context, state) => const EmployeeFaceRegistrationScreen(),
+    ),
+
+    //change password home screen
+    GoRoute(
+      path: '/change_password',
+      builder: (context, state) => VerifyPasswordScreen(),
+    ),
+    GoRoute(
+      path: '/set-new-password',
+      builder: (context, state) => const SetNewPasswordScreen(),
     ),
   ],
 );

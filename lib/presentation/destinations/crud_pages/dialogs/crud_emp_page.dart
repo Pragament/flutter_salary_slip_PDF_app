@@ -79,7 +79,6 @@ class _CreateEditEmployeePageState extends State<CreateEditEmployeePage> {
                   );
                   context.pop();
                 },
-                child:  Text("save".tr(), style: TextStyle(fontSize: 18, color: Colors.white)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue,
                   minimumSize: const Size(double.infinity, 50),
@@ -87,6 +86,7 @@ class _CreateEditEmployeePageState extends State<CreateEditEmployeePage> {
                     borderRadius: BorderRadius.circular(8.0),
                   ),
                 ),
+                child:  Text("save".tr(), style: TextStyle(fontSize: 18, color: Colors.white)),
               ),
             ],
           ),

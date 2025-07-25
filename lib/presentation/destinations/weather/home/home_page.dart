@@ -2,17 +2,12 @@ import 'package:auto_route/annotations.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_template/presentation/base/page/base_page.dart';
 import 'package:flutter_template/presentation/base/widgets/theme/theme_picker/theme_picker.dart';
 import 'package:flutter_template/presentation/destinations/weather/home/home_screen.dart';
-import 'package:flutter_template/presentation/destinations/weather/home/home_screen_intent.dart';
-import 'package:flutter_template/presentation/destinations/weather/home/home_screen_state.dart';
-import 'package:flutter_template/presentation/destinations/weather/home/home_view_model.dart';
 import 'package:flutter_template/presentation/destinations/weather/home/widgets/home_page_body/home_page_drawer.dart';
 import 'package:flutter_template/generated/codegen_loader.g.dart';
 import 'package:flutter_template/foundation/security/admin_security.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'widgets/home_page_body/home_page_body.dart';
 
 @RoutePage()
 class HomePage extends ConsumerStatefulWidget {

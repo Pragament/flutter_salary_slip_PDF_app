@@ -19,7 +19,7 @@ final currentBranchProvider = StateNotifierProvider< CurrentBranchNotifier,Branc
 
   Branch? branch;
   if (organization?.branches != null && organization!.branches!.isNotEmpty) {
-    branch = organization!.branches!.firstWhere(
+    branch = organization.branches!.firstWhere(
           (b) => b.id == currentBranchId,
       orElse: () => organization.branches!.first, // Provide a fallback branch if needed
     );

@@ -4,7 +4,7 @@ import 'package:easy_localization/easy_localization.dart';
 import '../../../foundation/security/admin_security.dart';
 
 class AdminSettingsScreen extends ConsumerStatefulWidget {
-  const AdminSettingsScreen({Key? key}) : super(key: key);
+  const AdminSettingsScreen({super.key});
 
   @override
   ConsumerState<AdminSettingsScreen> createState() => _AdminSettingsScreenState();
