@@ -109,7 +109,10 @@ dependencies:
   tflite_flutter: ^0.11.0
   image: ^4.5.4
   device_info_plus: ^11.3.0
-
+  firebase_core: ^2.0.0
+  firebase_auth: ^4.0.0
+  google_sign_in: ^6.0.0
+  mailer: ^6.4.1
 
 dev_dependencies:
   auto_route_generator: ^8.0.0

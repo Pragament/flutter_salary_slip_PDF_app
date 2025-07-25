@@ -9,6 +9,7 @@ import '../../../services/providers/cur_group_provider.dart';
 import '../../../services/providers/cur_org_provider.dart';
 import '../../../services/providers/emp_provider.dart';
 import '../../../services/providers/csv_service_provider.dart';
+import '../../../services/auth/auth.dart';
 
 class ManageEmployeesScreen extends ConsumerStatefulWidget {
   const ManageEmployeesScreen({super.key});
@@ -122,6 +123,29 @@ class _ManageBranchesScreenState extends ConsumerState<ManageEmployeesScreen> {
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
+          // Bulk email button
+          FloatingActionButton(
+            heroTag: 'bulk_email',
+            onPressed: () async {
+              final service = BulkEmailService();
+              final userCredential = await service.signInWithGoogle();
+              if (userCredential != null) {
+                // Prepare employee data for email
+                final employeeList = employees?.map((e) => {
+                  'name': e.name,
+                  'email': e.email,
+                }).toList() ?? [];
+                await service.sendBulkEmailsForUserCredential(
+                  userCredential: userCredential,
+                  employees: employeeList,
+                );
+                _showMessage('Bulk email sent!', true);
+              }
+            },
+            tooltip: 'Send Bulk Email',
+            child: const Icon(Icons.email),
+          ),
+          const SizedBox(height: 16),
           // CSV Import button
           FloatingActionButton(
             heroTag: 'import_csv',
