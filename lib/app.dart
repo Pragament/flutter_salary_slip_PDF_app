@@ -5,26 +5,25 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_displaymode/flutter_displaymode.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_template/domain/di/domain_module.dart';
 import 'package:flutter_template/foundation/logger/logger.dart';
-import 'package:flutter_template/foundation/security/admin_security.dart';
 import 'package:flutter_template/interactor/di/interactor_module.dart';
-import 'package:flutter_template/navigation/di/navigation_module.dart';
 import 'package:flutter_template/presentation/di/presentation_module.dart';
 import 'package:flutter_template/generated/codegen_loader.g.dart' as generated;
 import 'package:flutter_template/presentation/intl/translations/translation_loader.dart';
 import 'package:flutter_template/presentation/template_app.dart';
 import 'package:flutter_template/repository/di/repository_module.dart';
 import 'package:flutter_template/services/base/database/hive_manager/models.dart';
-import 'package:flutter_template/services/base/database/hive_manager/Repos/org_repo.dart';
 import 'package:flutter_template/services/base/id_generator.dart';
 import 'package:flutter_template/services/di/service_module.dart';
 import 'package:get_it/get_it.dart';
 import 'package:hive_flutter/adapters.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 void startApp() async {
+  // Initialize Firebase
+  await Firebase.initializeApp();
   // Clear any previous admin authentication at app startup
   final tempPrefs = await SharedPreferences.getInstance();
   await tempPrefs.setBool('isAdminAuthenticated', false);

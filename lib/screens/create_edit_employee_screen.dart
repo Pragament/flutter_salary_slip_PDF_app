@@ -11,14 +11,14 @@ class CreateEditEmployeeScreen extends StatefulWidget {
   final Function(String name, String phone, String email, Map<String, Map<String, String>> dynamicFields) onSave;
 
   const CreateEditEmployeeScreen({
-    Key? key,
+    super.key,
     required this.title,
     this.initialName,
     this.initialPhone,
     this.initialEmail,
     this.initialDynamicFields,
     required this.onSave,
-  }) : super(key: key);
+  });
 
   @override
   _CreateEditEmployeeScreenState createState() => _CreateEditEmployeeScreenState();
@@ -212,12 +212,12 @@ class _CreateEditEmployeeScreenState extends State<CreateEditEmployeeScreen> {
                               keyboardType: _getKeyboardTypeForField(fieldName),
                             ),
                           );
-                        }).toList(),
+                        }),
                       ],
                     ),
                   ),
                 );
-              }).toList(),
+              }),
             ],
             
             SizedBox(height: 16),

@@ -9,10 +9,10 @@ class AdminLockScreen extends ConsumerStatefulWidget {
   final String? redirectPath;
 
   const AdminLockScreen({
-    Key? key,
+    super.key,
     required this.child,
     this.redirectPath,
-  }) : super(key: key);
+  });
 
   @override
   ConsumerState<AdminLockScreen> createState() => _AdminLockScreenState();

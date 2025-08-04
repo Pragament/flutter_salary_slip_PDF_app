@@ -20,8 +20,8 @@ ThemeData buildTheme(ColorScheme colorScheme) {
     popupMenuTheme: PopupMenuThemeData(color: colorScheme.surface),
     cardTheme: AppCardTheme(cardColor: colorScheme.surface),
     snackBarTheme: SnackBarThemeData(backgroundColor: colorScheme.surface),
-    appBarTheme: AppBarTheme(color: colorScheme.surfaceVariant),
+    appBarTheme: AppBarTheme(color: colorScheme.surfaceContainerHighest),
     colorScheme: colorScheme,
-    scaffoldBackgroundColor: colorScheme.background,
+    scaffoldBackgroundColor: colorScheme.surface,
   );
 }

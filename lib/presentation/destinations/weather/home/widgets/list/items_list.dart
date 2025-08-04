@@ -74,11 +74,11 @@ class _ItemsListState extends ConsumerState<ItemsList> {
             ref.read(currentGroupProvider.notifier).setGroup(Group("allGrp".tr(), null,
                 {}, "allGroups"));
             context.pop();
-          }, child: Text("selectAll".tr(),style: TextStyle(color: Colors.white),),
+          },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.grey.shade700,
               minimumSize: const Size(200, 50),
-            ),
+            ), child: Text("selectAll".tr(),style: TextStyle(color: Colors.white),),
           ),
           // Filtered List
           Expanded(

@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:easy_localization/easy_localization.dart';
-
 class CsvMappingScreen extends StatefulWidget {
   final List<String> csvHeaders;
   final Function(Map<String, String>) onMappingComplete;
 
   const CsvMappingScreen({
-    Key? key,
+    super.key,
     required this.csvHeaders,
     required this.onMappingComplete,
-  }) : super(key: key);
+  });
 
   @override
+  // ignore: library_private_types_in_public_api
   _CsvMappingScreenState createState() => _CsvMappingScreenState();
 }
 
@@ -208,7 +207,7 @@ class _CsvMappingScreenState extends State<CsvMappingScreen> {
                 ),
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
       floatingActionButton: FloatingActionButton(
@@ -225,8 +224,8 @@ class _CsvMappingScreenState extends State<CsvMappingScreen> {
             );
           }
         },
-        child: Icon(Icons.check),
         tooltip: 'Complete Mapping',
+        child: Icon(Icons.check),
       ),
     );
   }

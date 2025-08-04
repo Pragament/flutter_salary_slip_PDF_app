@@ -1,8 +1,12 @@
 import 'dart:io';
+import 'package:csv/csv.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import '../../../services/base/database/hive_manager/models.dart';
 import '../../../services/providers/attendance_provider.dart';
 import '../../../services/providers/emp_provider.dart';
@@ -200,6 +204,146 @@ class _AttendanceHistoryScreenState
     }
   }
 
+  Future<void> _exportAttendanceCSV() async {
+  final attendanceLogs = ref.read(attendanceProvider);
+  final employees = ref.read(employeeProvider);
+
+  if (attendanceLogs == null || attendanceLogs.isEmpty) {
+    _showSnackBar('No attendance records to export', isSuccess: false);
+    return;
+  }
+
+  // Request storage permission on Android
+  if (Platform.isAndroid) {
+    final deviceInfo = DeviceInfoPlugin();
+    final androidInfo = await deviceInfo.androidInfo;
+    final sdkInt = androidInfo.version.sdkInt;
+
+    PermissionStatus status;
+
+    if (sdkInt >= 30) {
+      status = await Permission.manageExternalStorage.request();
+    } else {
+      status = await Permission.storage.request();
+    }
+
+    if (!status.isGranted) {
+      _showSnackBar('Storage permission denied', isSuccess: false);
+      return;
+    }
+  }
+
+  try {
+    // Map for quick employee lookup
+    final employeeMap = <String, Employee>{};
+    if (employees != null) {
+      for (final emp in employees) {
+        employeeMap[emp.id] = emp;
+      }
+    }
+
+    // Formatters (based on local time zone)
+    final dateFormatter = DateFormat('yyyy-MM-dd');
+    final timeFormatter = DateFormat('h:mm a');
+
+    final rows = <List<String>>[];
+
+    // Header row
+    rows.add([
+      'Employee Name',
+      'Date',
+      'In Time',
+      'Out Time',
+      'Duration',
+    ]);
+
+    // Process attendance logs
+    for (final log in attendanceLogs) {
+      final emp = employeeMap[log.employeeId];
+      final name = emp?.name ?? 'Unknown';
+
+      final localPunchIn = log.punchInTime.toLocal();
+      final date = dateFormatter.format(localPunchIn);
+      final inTime = timeFormatter.format(localPunchIn);
+
+      String outTime = '--';
+      String duration = '--';
+
+      if (log.punchOutTime != null) {
+        final localPunchOut = log.punchOutTime!.toLocal();
+        outTime = timeFormatter.format(localPunchOut);
+
+        final diff = localPunchOut.difference(localPunchIn);
+        final hours = diff.inHours;
+        final minutes = diff.inMinutes % 60;
+        duration = '${hours}h ${minutes}m';
+      }
+
+      rows.add([
+        name,
+        date,
+        inTime,
+        outTime,
+        duration,
+      ]);
+    }
+
+    // Convert to CSV format
+    final csvData = const ListToCsvConverter().convert(rows);
+
+    final fileName = 'attendance_export_${DateTime.now().millisecondsSinceEpoch}.csv';
+    String? savedPath;
+
+    // Known Downloads paths to try
+    final downloadPaths = [
+      '/storage/emulated/0/Download',
+      '/storage/emulated/0/Downloads',
+      '/sdcard/Download',
+      '/sdcard/Downloads',
+    ];
+
+    for (final pathStr in downloadPaths) {
+      try {
+        final dir = Directory(pathStr);
+        if (await dir.exists()) {
+          final file = File('$pathStr/$fileName');
+          await file.writeAsString(csvData);
+          if (await file.exists()) {
+            savedPath = file.path;
+            break;
+          }
+        }
+      } catch (_) {
+        continue;
+      }
+    }
+
+    // Fallback to app-specific folder
+    if (savedPath == null) {
+      final directory = await getExternalStorageDirectory();
+      final file = File('${directory!.path}/$fileName');
+      await file.writeAsString(csvData);
+      if (await file.exists()) {
+        savedPath = file.path;
+      }
+    }
+
+    // Show success message
+    if (savedPath != null) {
+      if (savedPath.contains('/Download')) {
+        _showSnackBar('CSV exported to Downloads folder');
+      } else {
+        _showSnackBar('CSV exported to app folder (Downloads not accessible)');
+      }
+    } else {
+      _showSnackBar('Failed to save CSV file', isSuccess: false);
+    }
+
+  } catch (e) {
+    _showSnackBar('Error exporting CSV: ${e.toString()}', isSuccess: false);
+  }
+}
+
   void _viewAttendanceImage(BuildContext context, String imagePath) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -309,6 +453,19 @@ class _AttendanceHistoryScreenState
                           ),
                         ],
                       ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                              onPressed: () {
+                                _exportAttendanceCSV();
+                              },
+                              child: Text(
+                                'Export as csv',
+                                style: TextStyle(color: Colors.red),
+                              )),
+                        ],
+                      )
                     ],
                   ),
                 ),

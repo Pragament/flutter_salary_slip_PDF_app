@@ -10,12 +10,12 @@ class CreateEditPage extends StatefulWidget {
   final void Function(String name, Map<String,Map<String, String>> dynamicFields) onSubmit;
 
   const CreateEditPage({
-    Key? key,
+    super.key,
     required this.title,
     this.initialName,
     this.initialDynamicFields,
     required this.onSubmit,
-  }) : super(key: key);
+  });
 
   @override
   _CreateEditPageState createState() => _CreateEditPageState();
