@@ -1,0 +1,137 @@
+import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_template/services/providers/cur_branch_provider.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../services/providers/branch_provider.dart';
+import '../../../../services/providers/cur_org_provider.dart';
+import '../../../services/base/database/hive_manager/models.dart';
+import '../../../services/base/id_generator.dart';
+
+
+class ManageBranchesScreen extends ConsumerStatefulWidget {
+  const ManageBranchesScreen({super.key});
+
+  @override
+  ConsumerState<ManageBranchesScreen> createState() => _ManageBranchesScreenState();
+}
+
+class _ManageBranchesScreenState extends ConsumerState<ManageBranchesScreen> {
+  @override
+  Widget build(BuildContext context) {
+    final currentOrganization = ref.watch(currentOrganizationProvider);
+    if (currentOrganization == null) {
+      return Scaffold(
+        appBar: AppBar(title: Text("manageBr".tr())),
+        body: Center(child: Text("noOrgSelected".tr())),
+      );
+    }
+
+    final branches = ref.watch(branchProvider);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("${"manageBr".tr()} - ${currentOrganization.name}"),
+      ),
+      body: branches.isEmpty?Center(child: Text("noBranch".tr())):ListView.builder(
+        itemCount: branches.length,
+        itemBuilder: (context, index) {
+          final branch = branches[index];
+          return Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Card(
+              elevation: 3,
+              color: Colors.grey.shade100,
+              child: ListTile(
+                title: Text(branch.name,style: TextStyle(color: Colors.black)),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.edit),
+                      onPressed: () => context.push("/create-edit-page", extra: {
+                        "title": "editBr".tr(),
+                        "initialName": branch.name,
+                        "initialDynamicFields": branch.dynamicFields,
+                        "onSave": (name, fields) {
+                          final updatedBranch =
+                              Branch(name, branch.groups, fields, branch.id);
+                          ref
+                              .read(branchProvider.notifier)
+                              .updateBranch(currentOrganization.id, updatedBranch);
+                          ref
+                              .read(currentBranchProvider.notifier)
+                              .resetBranch(updatedBranch,null,null);
+                        },
+                      })
+                      //     _openCreateEditDialog(
+                      //   context,
+                      //   organizationId: currentOrganization.id,
+                      //   branch: branch,
+                      //   onSave: (name, fields) {
+                      //     final updatedBranch = Branch(name, branch.groups, fields, branch.id);
+                      //     ref
+                      //         .read(branchProvider.notifier)
+                      //         .updateBranch(currentOrganization.id, updatedBranch);
+                      //   },
+                      // )
+                      ,
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.delete),
+                      onPressed: () {
+                        ref
+                          .read(branchProvider.notifier)
+                          .deleteBranch(currentOrganization.id, branch.id);
+                        ref
+                            .read(currentBranchProvider.notifier)
+                            .resetBranch(null,branch,currentOrganization);
+                        },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () =>context.push("/create-edit-page",extra: {
+          "title":"createBr".tr(),  "initialName": null,
+          "initialDynamicFields": null,"onSave":(name, fields) {
+        final newBranch = Branch(name, null, fields, generateId());
+        ref.read(branchProvider.notifier).addBranch(currentOrganization.id, newBranch);
+      },
+        })
+        //     _openCreateEditDialog(
+        //   context,
+        //   organizationId: currentOrganization.id,
+        //   onSave: (name, fields) {
+        //     final newBranch = Branch(name, null, fields, generateId());
+        //     ref.read(branchProvider.notifier).addBranch(currentOrganization.id, newBranch);
+        //   },
+        // )
+        ,
+
+        child: Icon(Icons.add),
+      ),
+    );
+  }
+
+  // void _openCreateEditDialog(BuildContext context,
+  //     {required String organizationId,
+  //       Branch? branch,
+  //       required void Function(String name, Map<String, String> fields) onSave}) {
+  //   showDialog(
+  //     context: context,
+  //     builder: (context) {
+  //       return CreateEditPage(
+  //         title: branch == null ? "Create Branch" : "Edit Branch",
+  //         initialName: branch?.name,
+  //         initialDynamicFields: branch?.dynamicFields,
+  //         onSubmit: onSave,
+  //       );
+  //     },
+  //   );
+  // }
+}

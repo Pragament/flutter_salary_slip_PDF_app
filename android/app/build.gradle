@@ -25,7 +25,7 @@ if (flutterVersionName == null) {
 
 android {
     namespace "com.wednesday.flutter_template"
-    compileSdkVersion project.properties['flutter.compileSdkVersion'].toInteger()
+    compileSdkVersion 35
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -84,7 +84,10 @@ android {
     buildTypes {
         release {
             // Only replace with signingConfigs.debug so `flutter run --release` works locally.
-            signingConfig signingConfigs.release
+            signingConfig signingConfigs.debug
+            minifyEnabled true
+            shrinkResources false
+            
         }
     }
 
@@ -115,4 +118,7 @@ dependencies {
     implementation 'androidx.core:core-splashscreen:1.0.0-beta01'
 
     androidTestUtil "androidx.test:orchestrator:1.4.2"
+
+    // Add this line
+    implementation 'org.tensorflow:tensorflow-lite-gpu:2.8.0'
 }

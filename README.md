@@ -1,3 +1,28 @@
+## Quick build steps
+```
+dart pub global activate derry
+flutter pub get
+derry generate all
+derry launch dev
+```
+## Quick build steps for Microsoft windows users without derry
+```
+flutter pub get
+dart run build_runner build --delete-conflicting-outputs
+flutter run --flavor dev --dart-define=flavor=dev
+```
+
+```flutter pub run easy_localization:generate -S assets/translations -O lib/generated```
+
+## Current app screenshots
+
+<div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
+  <img src="https://github.com/user-attachments/assets/a529597a-210e-4b45-8e6c-930dc3e9c7d4" alt="Screenshot 1" width="300px" style="border-radius: 8px;">
+  <img src="https://github.com/user-attachments/assets/6f904db6-752b-4e65-b43d-137628eee3a8" alt="Screenshot 1" width="300px" style="border-radius: 8px;">
+  <img src="https://github.com/user-attachments/assets/d62b5834-3f39-48a9-bd6b-2aa1e7d286bf" alt="Screenshot 2" width="300px" style="border-radius: 8px;">
+  <img src="https://github.com/user-attachments/assets/2c475c55-76fd-4a4f-8f40-f26b1d316f3f" alt="Screenshot 3" width="300px" style="border-radius: 8px;">
+</div>
+
 
 
 <img align="left" src="flutter_template_github.svg" width="480" height="440" />

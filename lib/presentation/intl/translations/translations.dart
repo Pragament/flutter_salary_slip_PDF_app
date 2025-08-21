@@ -5,3 +5,4 @@ typedef Translations = CodegenLoader;
 
 @visibleForTesting
 const englishUS = Translations.en_US;
+const hindiIN = Translations.hi_IN;
